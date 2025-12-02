@@ -318,123 +318,6 @@
 #modelList::-webkit-scrollbar-thumb:hover {
     background: rgba(255,255,255,0.3);
 }
-
-        /* 主题颜色按钮样式 */
-.theme-color-btn {
-    flex: 1;
-    padding: 8px 0;
-    border-radius: 8px;
-    border: none;
-    cursor: pointer;
-    font-size: 12px;
-    transition: all 0.2s;
-    min-height: 36px;
-}
-
-.theme-color-btn:hover {
-    transform: scale(1.05);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-}
-
-.theme-color-btn.active {
-    border: 3px solid #fff !important;
-    box-shadow: 0 0 0 2px var(--accent-blue);
-}
-
-/* 滑块样式 */
-input[type="range"] {
-    -webkit-appearance: none;
-    height: 6px;
-    background: rgba(255,255,255,0.1);
-    border-radius: 3px;
-    outline: none;
-}
-
-input[type="range"]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    background: var(--accent-blue);
-    cursor: pointer;
-}
-
-input[type="range"]::-moz-range-thumb {
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    background: var(--accent-blue);
-    cursor: pointer;
-    border: none;
-}
-
-/* 主题变量定义 */
-:root {
-    /* 默认黑色主题 - 已存在，不需修改 */
-}
-
-[data-theme="white"] {
-    --glass-bg: rgba(255, 255, 255, 0.15);
-    --glass-border: rgba(0, 0, 0, 0.1);
-    --text-main: rgba(0, 0, 0, 0.9);
-    --text-sub: rgba(0, 0, 0, 0.6);
-    --card-bg: #FFFFFF;
-    --accent-blue: #007AFF;
-    --accent-green: #34C759;
-    --accent-red: #FF3B30;
-    background-color: #f2f2f7 !important;
-}
-
-[data-theme="lightblue"] {
-    --glass-bg: rgba(230, 242, 255, 0.15);
-    --glass-border: rgba(153, 194, 255, 0.2);
-    --text-main: rgba(0, 51, 102, 0.9);
-    --text-sub: rgba(0, 51, 102, 0.6);
-    --card-bg: #E6F2FF;
-    --accent-blue: #007AFF;
-    --accent-green: #34C759;
-    --accent-red: #FF3B30;
-    background-color: #e6f2ff !important;
-}
-
-[data-theme="lightgreen"] {
-    --glass-bg: rgba(230, 255, 230, 0.15);
-    --glass-border: rgba(153, 230, 153, 0.2);
-    --text-main: rgba(0, 102, 0, 0.9);
-    --text-sub: rgba(0, 102, 0, 0.6);
-    --card-bg: #E6FFE6;
-    --accent-blue: #00BFFF;
-    --accent-green: #00CC66;
-    --accent-red: #FF6666;
-    background-color: #e6ffe6 !important;
-}
-
-[data-theme="lightpink"] {
-    --glass-bg: rgba(255, 230, 242, 0.15);
-    --glass-border: rgba(255, 153, 204, 0.2);
-    --text-main: rgba(153, 0, 76, 0.9);
-    --text-sub: rgba(153, 0, 76, 0.6);
-    --card-bg: #FFE6F2;
-    --accent-blue: #FF66B2;
-    --accent-green: #FF99CC;
-    --accent-red: #FF3366;
-    background-color: #ffe6f2 !important;
-}
-
-/* 适配不同主题的按钮颜色 */
-[data-theme="white"] .btn-primary,
-[data-theme="lightblue"] .btn-primary,
-[data-theme="lightgreen"] .btn-primary,
-[data-theme="lightpink"] .btn-primary {
-    color: #fff;
-}
-
-[data-theme="white"] .dock-btn,
-[data-theme="lightblue"] .dock-btn,
-[data-theme="lightgreen"] .dock-btn,
-[data-theme="lightpink"] .dock-btn {
-    background: rgba(0,0,0,0.08);
-}
     </style>
 </head>
 <body>
@@ -484,9 +367,8 @@ input[type="range"]::-moz-range-thumb {
             <button class="dock-btn highlight" onclick="triggerDailySummary()">
                 ✨ AI今日整理
             </button>
-    <!-- 将原来的换背景按钮改为美化主题 -->
-            <button class="dock-btn" onclick="openModal('themeModal'); loadThemeSettings();">
-                🎨 美化主题
+            <button class="dock-btn" onclick="openModal('bgModal')">
+                🖼 换背景
             </button>
             <!-- 添加到 dock-row 中，位于背景按钮之后 -->
             <button class="dock-btn" onclick="openModal('dataModal')">
@@ -615,60 +497,18 @@ input[type="range"]::-moz-range-thumb {
     </div>
 
     <!-- 6. 背景设置 -->
-<!-- 替换原来的 bgModal -->
-<div class="modal-overlay" id="themeModal">
-    <div class="modal-card">
-        <div class="modal-header">
-            <span>🎨 美化主题</span>
-            <span class="close-icon" onclick="closeModal('themeModal')">×</span>
-        </div>
-        
-        <!-- 主题色选择 -->
-        <div class="form-group">
-            <label class="form-label">主题色</label>
-            <div style="display: flex; gap: 10px; margin-top: 8px;">
-                <button class="theme-color-btn" data-color="black" onclick="applyThemeColor('black')" style="background: #000; border: 2px solid #666;">默认</button>
-                <button class="theme-color-btn" data-color="white" onclick="applyThemeColor('white')" style="background: #fff; color: #000; border: 2px solid #ccc;">白色</button>
-                <button class="theme-color-btn" data-color="lightblue" onclick="applyThemeColor('lightblue')" style="background: #e6f2ff; border: 2px solid #99c2ff;">淡蓝</button>
-                <button class="theme-color-btn" data-color="lightgreen" onclick="applyThemeColor('lightgreen')" style="background: #e6ffe6; border: 2px solid #99e699;">淡绿</button>
-                <button class="theme-color-btn" data-color="lightpink" onclick="applyThemeColor('lightpink')" style="background: #ffe6f2; border: 2px solid #ff99cc;">淡粉</button>
-            </div>
-        </div>
-        
-        <!-- 背景设置 -->
-        <div class="form-group">
-            <label class="form-label">背景设置</label>
-            <input type="text" id="themeBgUrl" class="form-input" placeholder="图片链接" style="margin-bottom: 10px;">
-            
-            <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-                <input type="file" id="themeFileInput" class="form-input" accept="image/*" style="flex: 1;">
-                <button class="btn-primary" onclick="previewThemeBg()" style="padding: 8px 12px; font-size: 13px;">预览</button>
-            </div>
-            
-            <!-- 亮度调节 -->
-            <div style="margin-bottom: 15px;">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-                    <span style="font-size: 12px; color: var(--text-sub);">亮度: <span id="brightnessValue">100%</span></span>
-                </div>
-                <input type="range" id="brightnessSlider" min="20" max="200" value="100" class="form-input" style="width: 100%; padding: 0;">
-            </div>
-            
-            <!-- 清晰度调节 -->
-            <div style="margin-bottom: 15px;">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-                    <span style="font-size: 12px; color: var(--text-sub);">清晰度: <span id="blurValue">3px</span></span>
-                </div>
-                <input type="range" id="blurSlider" min="0" max="20" value="3" class="form-input" style="width: 100%; padding: 0;">
-            </div>
-            
-            <!-- 背景操作按钮 -->
-            <div style="display: flex; gap: 10px;">
-                <button class="btn-primary" onclick="saveThemeSettings()" style="flex: 1;">应用设置</button>
-                <button class="btn-primary btn-secondary" onclick="resetTheme()" style="flex: 1;">恢复默认</button>
-            </div>
+    <div class="modal-overlay" id="bgModal">
+        <div class="modal-card">
+            <div class="modal-header"><span>🖼 更换背景</span><span class="close-icon" onclick="closeModal('bgModal')">×</span></div>
+            <label class="form-label">图片链接</label>
+            <input type="text" id="bgUrlInput" class="form-input" placeholder="https://...">
+            <label class="form-label" style="margin-top:10px;">或上传本地图片</label>
+            <input type="file" id="bgFileInput" class="form-input" accept="image/*">
+
+            <button class="btn-primary" onclick="saveBg()">应用</button>
+            <button class="btn-primary btn-secondary" onclick="resetBg()">恢复默认</button>
         </div>
     </div>
-</div>
     <!-- 7. 数据管理 -->
 <div class="modal-overlay" id="dataModal">
     <div class="modal-card">
@@ -1432,198 +1272,6 @@ function displayModels(models) {
         modelListEl.appendChild(item);
     });
 }
-        // === 美化主题功能 ===
-let themeSettings = JSON.parse(localStorage.getItem('mb_theme') || '{"color":"black","bg":"","brightness":100,"blur":3}');
-
-function loadThemeSettings() {
-    // 加载保存的主题设置
-    document.getElementById('themeBgUrl').value = themeSettings.bg || '';
-    document.getElementById('brightnessSlider').value = themeSettings.brightness || 100;
-    document.getElementById('blurSlider').value = themeSettings.blur || 3;
-    document.getElementById('brightnessValue').textContent = themeSettings.brightness + '%' || '100%';
-    document.getElementById('blurValue').textContent = (themeSettings.blur || 3) + 'px';
-    
-    // 绑定滑块事件
-    document.getElementById('brightnessSlider').oninput = function() {
-        document.getElementById('brightnessValue').textContent = this.value + '%';
-        updateBgPreview();
-    };
-    
-    document.getElementById('blurSlider').oninput = function() {
-        document.getElementById('blurValue').textContent = this.value + 'px';
-        updateBgPreview();
-    };
-    
-    // 绑定文件上传事件
-    document.getElementById('themeFileInput').addEventListener('change', function(e) {
-        const file = e.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = function(ev) {
-                // 修复本地图片不能显示的bug：确保使用正确格式
-                let imgData = ev.target.result;
-                // 如果是blob URL，转换为data URL
-                if (imgData.startsWith('blob:')) {
-                    // 重新读取
-                    const newReader = new FileReader();
-                    newReader.onload = function(e2) {
-                        document.getElementById('themeBgUrl').value = e2.target.result;
-                        updateBgPreview();
-                    };
-                    newReader.readAsDataURL(file);
-                } else {
-                    document.getElementById('themeBgUrl').value = imgData;
-                    updateBgPreview();
-                }
-            };
-            reader.readAsDataURL(file);
-        }
-    });
-    
-    // 高亮当前主题色按钮
-    document.querySelectorAll('.theme-color-btn').forEach(btn => {
-        btn.classList.remove('active');
-        if (btn.dataset.color === themeSettings.color) {
-            btn.classList.add('active');
-        }
-    });
-    
-    // 应用当前主题
-    applyThemeColor(themeSettings.color || 'black');
-}
-
-function applyThemeColor(color) {
-    // 移除所有主题属性
-    document.documentElement.removeAttribute('data-theme');
-    
-    if (color !== 'black') {
-        document.documentElement.setAttribute('data-theme', color);
-    }
-    
-    // 保存主题色
-    themeSettings.color = color;
-    
-    // 高亮当前按钮
-    document.querySelectorAll('.theme-color-btn').forEach(btn => {
-        btn.classList.remove('active');
-        if (btn.dataset.color === color) {
-            btn.classList.add('active');
-        }
-    });
-    
-    // 立即更新背景颜色
-    updateBodyBackground();
-}
-
-function updateBodyBackground() {
-    const theme = themeSettings.color || 'black';
-    const bgColors = {
-        'black': '#000',
-        'white': '#f2f2f7',
-        'lightblue': '#e6f2ff',
-        'lightgreen': '#e6ffe6',
-        'lightpink': '#ffe6f2'
-    };
-    
-    document.body.style.backgroundColor = bgColors[theme] || '#000';
-}
-
-function previewThemeBg() {
-    const bgUrl = document.getElementById('themeBgUrl').value.trim();
-    if (bgUrl) {
-        updateBgPreview();
-    }
-}
-
-function updateBgPreview() {
-    const bgImage = document.getElementById('bgImage');
-    const bgUrl = document.getElementById('themeBgUrl').value.trim();
-    
-    if (bgUrl) {
-        // 直接设置背景图片
-        bgImage.style.backgroundImage = `url('${bgUrl}')`;
-    }
-    
-    // 应用亮度
-    const brightness = document.getElementById('brightnessSlider').value;
-    bgImage.style.filter = `brightness(${brightness}%) blur(${document.getElementById('blurSlider').value}px)`;
-}
-
-function saveThemeSettings() {
-    // 保存主题设置
-    themeSettings = {
-        color: themeSettings.color || 'black',
-        bg: document.getElementById('themeBgUrl').value.trim(),
-        brightness: parseInt(document.getElementById('brightnessSlider').value),
-        blur: parseInt(document.getElementById('blurSlider').value)
-    };
-    
-    // 保存到localStorage
-    localStorage.setItem('mb_theme', JSON.stringify(themeSettings));
-    
-    // 应用设置
-    applyThemeColor(themeSettings.color);
-    
-    const bgImage = document.getElementById('bgImage');
-    if (themeSettings.bg) {
-        bgImage.style.backgroundImage = `url('${themeSettings.bg}')`;
-    }
-    
-    bgImage.style.filter = `brightness(${themeSettings.brightness}%) blur(${themeSettings.blur}px)`;
-    
-    closeModal('themeModal');
-    alert('主题设置已保存！');
-}
-
-function resetTheme() {
-    // 重置为默认黑色主题
-    document.documentElement.removeAttribute('data-theme');
-    document.body.style.backgroundColor = '#000';
-    
-    // 重置背景图片
-    const defaultBg = 'https://images.unsplash.com/photo-1518020382113-a7e8fc38eac9?q=80&w=2000&auto=format&fit=crop';
-    document.getElementById('themeBgUrl').value = '';
-    document.getElementById('brightnessSlider').value = 100;
-    document.getElementById('blurSlider').value = 3;
-    document.getElementById('brightnessValue').textContent = '100%';
-    document.getElementById('blurValue').textContent = '3px';
-    
-    const bgImage = document.getElementById('bgImage');
-    bgImage.style.backgroundImage = `url('${defaultBg}')`;
-    bgImage.style.filter = 'brightness(100%) blur(3px)';
-    
-    // 重置按钮高亮
-    document.querySelectorAll('.theme-color-btn').forEach(btn => {
-        btn.classList.remove('active');
-        if (btn.dataset.color === 'black') {
-            btn.classList.add('active');
-        }
-    });
-    
-    // 清除保存的主题设置
-    localStorage.removeItem('mb_theme');
-    themeSettings = {color: 'black', bg: '', brightness: 100, blur: 3};
-    
-    alert('已恢复默认主题！');
-}
-
-// 在页面加载时应用保存的主题
-window.addEventListener('load', function() {
-    // 检查是否有保存的主题设置
-    const savedTheme = JSON.parse(localStorage.getItem('mb_theme'));
-    if (savedTheme) {
-        themeSettings = savedTheme;
-        applyThemeColor(themeSettings.color);
-        
-        const bgImage = document.getElementById('bgImage');
-        if (themeSettings.bg) {
-            bgImage.style.backgroundImage = `url('${themeSettings.bg}')`;
-        }
-        
-        bgImage.style.filter = `brightness(${themeSettings.brightness}%) blur(${themeSettings.blur}px)`;
-        updateBodyBackground();
-    }
-});
 // === 10. 修改callAI函数，使用配置的模型 ===
 // 原来的callAI函数已经使用DB.config.model，不需要修改
 // 但可以添加一个获取当前模型的小函数
@@ -1633,8 +1281,6 @@ function getCurrentModel() {
     </script>
 </body>
 </html>
-
-
 
 
 
