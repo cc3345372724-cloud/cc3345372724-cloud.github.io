@@ -398,26 +398,28 @@
             <label class="form-label">API Key</label>
             <input type="password" id="cfgKey" class="form-input" placeholder="sk-...">
         </div>
-        <div class="form-group">
-            <label class="form-label">Model</label>
-            <div style="display: flex; gap: 10px; margin-bottom: 8px;">
-                <input type="text" id="cfgModel" class="form-input" placeholder="gpt-3.5-turbo" style="flex: 1;">
-                <button class="btn-primary" onclick="fetchModels()" style="white-space: nowrap; padding: 12px 16px; font-size: 14px;">获取模型</button>
-            </div>
-            <div id="modelListContainer" style="display: none;">
-                <div class="form-label" style="margin-bottom: 8px;">可用模型:</div>
-                <div id="modelList" style="
-                    max-height: 200px;
-                    overflow-y: auto;
-                    background: rgba(255,255,255,0.05);
-                    border-radius: 8px;
-                    padding: 10px;
-                    display: flex;
-                    flex-direction: column;
-                    gap: 5px;
-                "></div>
-            </div>
-        </div>
+<!-- 将此div替换到原“Model”对应的form-group位置 -->
+<div class="form-group">
+    <label class="form-label">Model</label>
+    <input type="text" id="cfgModel" class="form-input" placeholder="例如：gpt-3.5-turbo" value="">
+    <button type="button" class="btn-primary" onclick="fetchModels()" style="margin-top: 8px; width: 100%;">
+        🔍 获取可用模型列表
+    </button>
+    <div id="modelListContainer" style="display: none; margin-top: 12px;">
+        <div class="form-label">可用模型：</div>
+        <div id="modelList" style="
+            max-height: 200px;
+            overflow-y: auto;
+            background: rgba(255,255,255,0.05);
+            border-radius: 8px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            font-size: 13px;
+        "></div>
+    </div>
+</div>
         <button class="btn-primary" onclick="saveConfig()">保存配置</button>
     </div>
 </div>
@@ -1149,145 +1151,127 @@ function clearAllData() {
         
         // === 9. 模型列表功能 ===
 async function fetchModels() {
-    const url = document.getElementById('cfgUrl').value;
-    const key = document.getElementById('cfgKey').value;
-    
-    if (!url || !key) {
-        alert('请先填写API URL和Key');
+    const baseUrl = document.getElementById('cfgUrl').value.trim().replace(/\/$/, '');
+    const apiKey = document.getElementById('cfgKey').value.trim();
+
+    if (!baseUrl || !apiKey) {
+        alert('请先填写完整的API URL和Key。');
         return;
     }
-    
-    // 显示加载状态
-    const btn = document.querySelector('button[onclick="fetchModels()"]');
-    const originalText = btn.textContent;
-    btn.textContent = '加载中...';
-    btn.disabled = true;
-    
+
+    const fetchButton = document.querySelector('button[onclick="fetchModels()"]');
+    const originalText = fetchButton.textContent;
+    const modelListContainer = document.getElementById('modelListContainer');
+    const modelListEl = document.getElementById('modelList');
+
+    // 更新按钮状态
+    fetchButton.textContent = '⌛ 请求中...';
+    fetchButton.disabled = true;
+    modelListEl.innerHTML = '<div style="text-align:center; padding:10px; color:var(--text-sub);">正在加载模型列表...</div>';
+    modelListContainer.style.display = 'block';
+
     try {
-        // 确保URL格式正确
-        let baseUrl = url.trim();
-        if (!baseUrl.endsWith('/')) {
-            baseUrl += '/';
-        }
-        
-        // 调用模型列表API
-        const response = await fetch(`${baseUrl}models`, {
+        // 关键修改：使用OpenAI兼容的/v1/models端点[citation:2]
+        const modelsEndpoint = `${baseUrl}/models`;
+        console.log(`正在请求: ${modelsEndpoint}`);
+
+        const response = await fetch(modelsEndpoint, {
             method: 'GET',
             headers: {
-                'Authorization': `Bearer ${key}`,
+                'Authorization': `Bearer ${apiKey}`,
                 'Content-Type': 'application/json'
             }
         });
-        
+
         if (!response.ok) {
-            throw new Error(`API返回错误: ${response.status} ${response.statusText}`);
+            // 处理常见的API错误
+            if (response.status === 401) {
+                throw new Error('API Key无效或未授权[citation:4]。');
+            } else if (response.status === 404) {
+                throw new Error(`API路径不存在(${modelsEndpoint})，请确认URL是否正确。`);
+            } else {
+                throw new Error(`API返回错误: ${response.status} ${response.statusText}`);
+            }
         }
-        
+
         const data = await response.json();
-        displayModels(data.data || data.models || []);
-        
+        console.log("API返回数据:", data);
+
+        // 处理OpenAI兼容格式的响应 (data.data 或 data.models)
+        const modelsArray = data.data || data.models || [];
+        displayModels(modelsArray);
+
     } catch (error) {
         console.error('获取模型列表失败:', error);
-        alert(`获取模型列表失败: ${error.message}\n请检查API配置和网络连接。`);
+        modelListEl.innerHTML = `<div style="color:var(--accent-red); padding:10px;">
+            <strong>请求失败</strong><br>
+            ${error.message}
+        </div>`;
+        // 网络错误时提供调试建议[citation:7]
+        if (error.message.includes('Failed to fetch')) {
+            console.warn('网络请求失败，请检查：1. API地址；2. 网络或代理设置[citation:4][citation:7]。');
+        }
     } finally {
-        // 恢复按钮状态
-        btn.textContent = originalText;
-        btn.disabled = false;
+        fetchButton.textContent = originalText;
+        fetchButton.disabled = false;
     }
 }
 
 function displayModels(models) {
-    const container = document.getElementById('modelListContainer');
-    const list = document.getElementById('modelList');
-    
+    const modelListEl = document.getElementById('modelList');
+    const modelInput = document.getElementById('cfgModel');
+
     if (!models || models.length === 0) {
-        list.innerHTML = '<div style="color: var(--text-sub); text-align: center; padding: 10px;">未找到可用模型</div>';
-        container.style.display = 'block';
+        modelListEl.innerHTML = '<div style="text-align:center; padding:10px; color:var(--text-sub);">API返回的模型列表为空。</div>';
         return;
     }
-    
-    // 过滤掉非对话模型（可选）
-    const chatModels = models.filter(model => 
-        model.id.includes('gpt') || 
-        model.id.includes('chat') ||
-        model.id.includes('claude') ||
-        model.id.includes('qwen')
-    );
-    
-    // 排序：把gpt-4放在前面
-    const sortedModels = chatModels.sort((a, b) => {
-        if (a.id.includes('gpt-4') && !b.id.includes('gpt-4')) return -1;
-        if (!a.id.includes('gpt-4') && b.id.includes('gpt-4')) return 1;
-        return a.id.localeCompare(b.id);
-    });
-    
-    list.innerHTML = '';
-    
-    sortedModels.forEach(model => {
-        const modelItem = document.createElement('div');
-        modelItem.className = 'model-item';
-        modelItem.style.cssText = `
-            padding: 8px 12px;
-            background: rgba(255,255,255,0.05);
+
+    modelListEl.innerHTML = '';
+    models.forEach(model => {
+        const item = document.createElement('div');
+        item.className = 'model-item';
+        item.style.cssText = `
+            padding: 10px;
             border-radius: 6px;
             cursor: pointer;
             transition: all 0.2s;
-            font-size: 13px;
             border: 1px solid transparent;
+            background: rgba(255, 255, 255, 0.03);
         `;
-        
-        modelItem.innerHTML = `
-            <div style="font-weight: 500; margin-bottom: 2px;">${model.id}</div>
-            <div style="font-size: 11px; color: var(--text-sub);">
-                ${model.object || 'model'} • ${new Date(model.created * 1000).toLocaleDateString() || ''}
+
+        // 假设模型对象有 id 字段 (OpenAI格式)
+        const modelId = model.id || model.name || '未知模型';
+        item.innerHTML = `
+            <div style="font-weight: 500;">${modelId}</div>
+            <div style="font-size: 11px; color: var(--text-sub); margin-top: 2px;">
+                对象类型: ${model.object || 'N/A'}
             </div>
         `;
-        
-        modelItem.onclick = () => {
-            // 将模型ID填入输入框
-            document.getElementById('cfgModel').value = model.id;
-            
-            // 添加选中效果
-            document.querySelectorAll('.model-item').forEach(item => {
-                item.style.background = 'rgba(255,255,255,0.05)';
-                item.style.borderColor = 'transparent';
-            });
-            modelItem.style.background = 'rgba(10, 132, 255, 0.2)';
-            modelItem.style.borderColor = 'var(--accent-blue)';
-            
-            // 可选：自动保存配置
-            // saveConfig();
-        };
-        
-        // 鼠标悬停效果
-        modelItem.onmouseenter = () => {
-            if (!modelItem.style.background.includes('0.2)')) {
-                modelItem.style.background = 'rgba(255,255,255,0.1)';
-            }
-        };
-        modelItem.onmouseleave = () => {
-            if (!modelItem.style.background.includes('0.2)')) {
-                modelItem.style.background = 'rgba(255,255,255,0.05)';
-            }
-        };
-        
-        list.appendChild(modelItem);
-    });
-    
-    container.style.display = 'block';
-    
-    // 如果已有选中的模型，高亮显示
-    const currentModel = document.getElementById('cfgModel').value;
-    if (currentModel) {
-        const items = list.querySelectorAll('.model-item');
-        items.forEach(item => {
-            if (item.textContent.includes(currentModel)) {
-                item.click(); // 触发点击事件来高亮
-            }
-        });
-    }
-}
 
+        item.onclick = () => {
+            // 1. 将模型ID填入输入框
+            modelInput.value = modelId;
+            // 2. 移除其他模型的高亮，高亮当前选中
+            document.querySelectorAll('.model-item').forEach(el => {
+                el.style.background = 'rgba(255, 255, 255, 0.03)';
+                el.style.borderColor = 'transparent';
+            });
+            item.style.background = 'rgba(10, 132, 255, 0.15)';
+            item.style.borderColor = 'var(--accent-blue)';
+        };
+
+        item.onmouseenter = () => {
+            if (item.style.background.includes('0.15)')) return;
+            item.style.background = 'rgba(255, 255, 255, 0.08)';
+        };
+        item.onmouseleave = () => {
+            if (item.style.background.includes('0.15)')) return;
+            item.style.background = 'rgba(255, 255, 255, 0.03)';
+        };
+
+        modelListEl.appendChild(item);
+    });
+}
 // === 10. 修改callAI函数，使用配置的模型 ===
 // 原来的callAI函数已经使用DB.config.model，不需要修改
 // 但可以添加一个获取当前模型的小函数
@@ -1297,6 +1281,7 @@ function getCurrentModel() {
     </script>
 </body>
 </html>
+
 
 
 
