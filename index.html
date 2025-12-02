@@ -337,10 +337,14 @@
                 📖 今日日记 <span id="moodDot" style="display:none; width:8px; height:8px; border-radius:50%; margin-left:5px;"></span>
             </button>
             <button class="dock-btn highlight" onclick="triggerDailySummary()">
-                ✨ AI 今日整理
+                ✨ AI今日整理
             </button>
             <button class="dock-btn" onclick="openModal('bgModal')">
                 🖼 换背景
+            </button>
+            <!-- 添加到 dock-row 中，位于背景按钮之后 -->
+            <button class="dock-btn" onclick="openModal('dataModal')">
+                💾 数据
             </button>
         </div>
         <div class="input-row">
@@ -456,6 +460,52 @@
             <button class="btn-primary btn-secondary" onclick="resetBg()">恢复默认</button>
         </div>
     </div>
+    <!-- 7. 数据管理 -->
+<div class="modal-overlay" id="dataModal">
+    <div class="modal-card">
+        <div class="modal-header"><span>💾 数据管理</span><span class="close-icon" onclick="closeModal('dataModal')">×</span></div>
+        
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+            <!-- 导出数据 -->
+            <button class="btn-primary" onclick="exportData()">
+                📤 导出全部数据
+            </button>
+            
+            <!-- 导入数据 -->
+            <div style="position: relative;">
+                <button class="btn-primary btn-secondary" onclick="document.getElementById('importFile').click()">
+                    📥 导入数据文件
+                </button>
+                <input type="file" id="importFile" accept=".json" 
+                       style="position: absolute; opacity: 0; width: 1px; height: 1px;"
+                       onchange="importData(event)">
+            </div>
+            
+            <!-- 数据清除 -->
+            <button class="btn-primary btn-danger" onclick="confirmClearData()">
+                🗑️ 清除全部数据
+            </button>
+            
+            <!-- 数据信息 -->
+            <div style="margin-top: 20px; padding: 12px; background: rgba(255,255,255,0.05); border-radius: 12px;">
+                <div style="font-size: 12px; color: var(--text-sub);">数据统计</div>
+                <div id="dataStats" style="margin-top: 8px; font-size: 13px; line-height: 1.6;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 确认清除弹窗 -->
+<div class="modal-overlay" id="confirmClearModal" style="z-index: 1001;">
+    <div class="modal-card" style="max-width: 350px;">
+        <div class="modal-header"><span>⚠️ 确认清除</span><span class="close-icon" onclick="closeModal('confirmClearModal')">×</span></div>
+        <p style="margin-bottom: 20px; line-height: 1.5;">确定要清除所有数据吗？此操作不可逆，建议先导出备份。</p>
+        <div style="display: flex; gap: 10px;">
+            <button class="btn-primary btn-secondary" onclick="closeModal('confirmClearModal')">取消</button>
+            <button class="btn-primary btn-danger" onclick="clearAllData()">确认清除</button>
+        </div>
+    </div>
+</div>
 
     <script>
         /* === 核心逻辑 === */
@@ -926,8 +976,132 @@
                 return null;
             }
         }
+
+        // === 8. 数据管理功能 ===
+function openDataModal() {
+    updateDataStats();
+    openModal('dataModal');
+}
+
+function updateDataStats() {
+    const stats = {
+        bubbles: DB.bubbles.length,
+        todos: Object.values(DB.todos).flat().length,
+        diaries: Object.keys(DB.diaries).length,
+        dates: [...new Set(DB.bubbles.map(b => b.date))].length
+    };
+    
+    document.getElementById('dataStats').innerHTML = `
+        <div>📝 灵感气泡: ${stats.bubbles} 个</div>
+        <div>✓ 待办事项: ${stats.todos} 条</div>
+        <div>📖 日记记录: ${stats.diaries} 天</div>
+        <div>📅 有数据天数: ${stats.dates} 天</div>
+    `;
+}
+
+function exportData() {
+    // 收集所有数据
+    const exportData = {
+        version: '1.0',
+        exportDate: new Date().toISOString(),
+        bubbles: DB.bubbles,
+        todos: DB.todos,
+        diaries: DB.diaries,
+        stats: DB.stats,
+        config: DB.config
+    };
+    
+    // 创建JSON文件
+    const dataStr = JSON.stringify(exportData, null, 2);
+    const dataBlob = new Blob([dataStr], {type: 'application/json'});
+    
+    // 创建下载链接
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `mind-bubbles-backup-${new Date().toISOString().split('T')[0]}.json`;
+    
+    // 触发下载
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    
+    alert('数据导出成功！');
+}
+
+function importData(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const importedData = JSON.parse(e.target.result);
+            
+            // 验证数据格式
+            if (!importedData.bubbles || !importedData.todos || !importedData.diaries) {
+                throw new Error('无效的数据文件格式');
+            }
+            
+            if (confirm(`是否导入数据？\n\n包含：\n• ${importedData.bubbles.length} 个灵感气泡\n• ${Object.values(importedData.todos).flat().length} 条待办\n• ${Object.keys(importedData.diaries).length} 天日记\n\n注意：这将覆盖现有数据！`)) {
+                // 覆盖数据
+                DB.bubbles = importedData.bubbles;
+                DB.todos = importedData.todos;
+                DB.diaries = importedData.diaries;
+                DB.stats = importedData.stats || { categories: {} };
+                DB.config = importedData.config || DB.config;
+                
+                // 保存到localStorage
+                saveAll();
+                
+                // 重新加载页面以应用新数据
+                location.reload();
+            }
+        } catch (error) {
+            alert('导入失败：' + error.message);
+        }
+        
+        // 重置文件输入
+        event.target.value = '';
+    };
+    
+    reader.readAsText(file);
+}
+
+function confirmClearData() {
+    closeModal('dataModal');
+    setTimeout(() => openModal('confirmClearModal'), 300);
+}
+
+function clearAllData() {
+    // 清除localStorage中的所有相关数据
+    localStorage.removeItem('mb_bubbles');
+    localStorage.removeItem('mb_todos');
+    localStorage.removeItem('mb_diaries');
+    localStorage.removeItem('mb_stats');
+    
+    // 重置内存中的数据
+    DB.bubbles = [];
+    DB.todos = {};
+    DB.diaries = {};
+    DB.stats = { categories: {} };
+    
+    // 保存空数据
+    saveAll();
+    
+    // 关闭弹窗
+    closeModal('confirmClearModal');
+    
+    // 重新加载页面
+    setTimeout(() => {
+        alert('数据已清除！页面将重新加载。');
+        location.reload();
+    }, 500);
+}
     </script>
 </body>
 </html>
+
 
 
