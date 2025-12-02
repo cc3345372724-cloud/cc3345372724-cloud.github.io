@@ -289,7 +289,35 @@
         .legend-box { text-align: left; font-size: 12px; color: var(--text-sub); display: inline-block; }
         .legend-item { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
         .dot { width: 8px; height: 8px; border-radius: 2px; }
-    
+
+        /* 模型列表样式 */
+.model-item:hover {
+    background: rgba(255,255,255,0.1) !important;
+}
+
+.model-item.selected {
+    background: rgba(10, 132, 255, 0.2) !important;
+    border-color: var(--accent-blue) !important;
+}
+
+/* 模型列表滚动条 */
+#modelList::-webkit-scrollbar {
+    width: 6px;
+}
+
+#modelList::-webkit-scrollbar-track {
+    background: rgba(255,255,255,0.05);
+    border-radius: 3px;
+}
+
+#modelList::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.2);
+    border-radius: 3px;
+}
+
+#modelList::-webkit-scrollbar-thumb:hover {
+    background: rgba(255,255,255,0.3);
+}
     </style>
 </head>
 <body>
@@ -356,24 +384,43 @@
     <!-- ================= 模态框区域 ================= -->
 
     <!-- 1. 设置 -->
-    <div class="modal-overlay" id="settingsModal">
-        <div class="modal-card">
-            <div class="modal-header"><span>🔧 API 设置</span><span class="close-icon" onclick="closeModal('settingsModal')">×</span></div>
-            <div class="form-group">
-                <label class="form-label">API URL</label>
-                <input type="text" id="cfgUrl" class="form-input" placeholder="https://api.openai.com/v1 ">
-            </div>
-            <div class="form-group">
-                <label class="form-label">API Key</label>
-                <input type="password" id="cfgKey" class="form-input" placeholder="sk-...">
-            </div>
-            <div class="form-group">
-                <label class="form-label">Model</label>
-                <input type="text" id="cfgModel" class="form-input" placeholder="gpt-3.5-turbo">
-            </div>
-            <button class="btn-primary" onclick="saveConfig()">保存配置</button>
+<div class="modal-overlay" id="settingsModal">
+    <div class="modal-card">
+        <div class="modal-header">
+            <span>🔧 API 设置</span>
+            <span class="close-icon" onclick="closeModal('settingsModal')">×</span>
         </div>
+        <div class="form-group">
+            <label class="form-label">API URL</label>
+            <input type="text" id="cfgUrl" class="form-input" placeholder="https://api.openai.com/v1">
+        </div>
+        <div class="form-group">
+            <label class="form-label">API Key</label>
+            <input type="password" id="cfgKey" class="form-input" placeholder="sk-...">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Model</label>
+            <div style="display: flex; gap: 10px; margin-bottom: 8px;">
+                <input type="text" id="cfgModel" class="form-input" placeholder="gpt-3.5-turbo" style="flex: 1;">
+                <button class="btn-primary" onclick="fetchModels()" style="white-space: nowrap; padding: 12px 16px; font-size: 14px;">获取模型</button>
+            </div>
+            <div id="modelListContainer" style="display: none;">
+                <div class="form-label" style="margin-bottom: 8px;">可用模型:</div>
+                <div id="modelList" style="
+                    max-height: 200px;
+                    overflow-y: auto;
+                    background: rgba(255,255,255,0.05);
+                    border-radius: 8px;
+                    padding: 10px;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 5px;
+                "></div>
+            </div>
+        </div>
+        <button class="btn-primary" onclick="saveConfig()">保存配置</button>
     </div>
+</div>
 
     <!-- 2. 日记 & 心情 -->
     <div class="modal-overlay" id="diaryModal">
@@ -1099,9 +1146,158 @@ function clearAllData() {
         location.reload();
     }, 500);
 }
+        
+        // === 9. 模型列表功能 ===
+async function fetchModels() {
+    const url = document.getElementById('cfgUrl').value;
+    const key = document.getElementById('cfgKey').value;
+    
+    if (!url || !key) {
+        alert('请先填写API URL和Key');
+        return;
+    }
+    
+    // 显示加载状态
+    const btn = document.querySelector('button[onclick="fetchModels()"]');
+    const originalText = btn.textContent;
+    btn.textContent = '加载中...';
+    btn.disabled = true;
+    
+    try {
+        // 确保URL格式正确
+        let baseUrl = url.trim();
+        if (!baseUrl.endsWith('/')) {
+            baseUrl += '/';
+        }
+        
+        // 调用模型列表API
+        const response = await fetch(`${baseUrl}models`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${key}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`API返回错误: ${response.status} ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        displayModels(data.data || data.models || []);
+        
+    } catch (error) {
+        console.error('获取模型列表失败:', error);
+        alert(`获取模型列表失败: ${error.message}\n请检查API配置和网络连接。`);
+    } finally {
+        // 恢复按钮状态
+        btn.textContent = originalText;
+        btn.disabled = false;
+    }
+}
+
+function displayModels(models) {
+    const container = document.getElementById('modelListContainer');
+    const list = document.getElementById('modelList');
+    
+    if (!models || models.length === 0) {
+        list.innerHTML = '<div style="color: var(--text-sub); text-align: center; padding: 10px;">未找到可用模型</div>';
+        container.style.display = 'block';
+        return;
+    }
+    
+    // 过滤掉非对话模型（可选）
+    const chatModels = models.filter(model => 
+        model.id.includes('gpt') || 
+        model.id.includes('chat') ||
+        model.id.includes('claude') ||
+        model.id.includes('qwen')
+    );
+    
+    // 排序：把gpt-4放在前面
+    const sortedModels = chatModels.sort((a, b) => {
+        if (a.id.includes('gpt-4') && !b.id.includes('gpt-4')) return -1;
+        if (!a.id.includes('gpt-4') && b.id.includes('gpt-4')) return 1;
+        return a.id.localeCompare(b.id);
+    });
+    
+    list.innerHTML = '';
+    
+    sortedModels.forEach(model => {
+        const modelItem = document.createElement('div');
+        modelItem.className = 'model-item';
+        modelItem.style.cssText = `
+            padding: 8px 12px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            border: 1px solid transparent;
+        `;
+        
+        modelItem.innerHTML = `
+            <div style="font-weight: 500; margin-bottom: 2px;">${model.id}</div>
+            <div style="font-size: 11px; color: var(--text-sub);">
+                ${model.object || 'model'} • ${new Date(model.created * 1000).toLocaleDateString() || ''}
+            </div>
+        `;
+        
+        modelItem.onclick = () => {
+            // 将模型ID填入输入框
+            document.getElementById('cfgModel').value = model.id;
+            
+            // 添加选中效果
+            document.querySelectorAll('.model-item').forEach(item => {
+                item.style.background = 'rgba(255,255,255,0.05)';
+                item.style.borderColor = 'transparent';
+            });
+            modelItem.style.background = 'rgba(10, 132, 255, 0.2)';
+            modelItem.style.borderColor = 'var(--accent-blue)';
+            
+            // 可选：自动保存配置
+            // saveConfig();
+        };
+        
+        // 鼠标悬停效果
+        modelItem.onmouseenter = () => {
+            if (!modelItem.style.background.includes('0.2)')) {
+                modelItem.style.background = 'rgba(255,255,255,0.1)';
+            }
+        };
+        modelItem.onmouseleave = () => {
+            if (!modelItem.style.background.includes('0.2)')) {
+                modelItem.style.background = 'rgba(255,255,255,0.05)';
+            }
+        };
+        
+        list.appendChild(modelItem);
+    });
+    
+    container.style.display = 'block';
+    
+    // 如果已有选中的模型，高亮显示
+    const currentModel = document.getElementById('cfgModel').value;
+    if (currentModel) {
+        const items = list.querySelectorAll('.model-item');
+        items.forEach(item => {
+            if (item.textContent.includes(currentModel)) {
+                item.click(); // 触发点击事件来高亮
+            }
+        });
+    }
+}
+
+// === 10. 修改callAI函数，使用配置的模型 ===
+// 原来的callAI函数已经使用DB.config.model，不需要修改
+// 但可以添加一个获取当前模型的小函数
+function getCurrentModel() {
+    return DB.config.model || document.getElementById('cfgModel').value;
+}
     </script>
 </body>
 </html>
+
 
 
 
