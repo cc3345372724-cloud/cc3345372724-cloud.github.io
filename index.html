@@ -318,6 +318,27 @@
 #modelList::-webkit-scrollbar-thumb:hover {
     background: rgba(255,255,255,0.3);
 }
+
+            /* === 🧠 神经脑图专用样式 === */
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    /* 节点脉冲动画 */
+    @keyframes nodePulse {
+        0% { box-shadow: 0 0 0 0 rgba(0, 255, 204, 0.4); }
+        70% { box-shadow: 0 0 0 10px rgba(0, 255, 204, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(0, 255, 204, 0); }
+    }
+
+    /* 模拟API连接线特效 */
+    .neuro-link-pulse {
+        position: absolute;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.8);
+        width: 4px; height: 4px;
+        pointer-events: none;
+        box-shadow: 0 0 10px #fff;
+    }
+
     </style>
 </head>
 <body>
@@ -367,6 +388,10 @@
             <button class="dock-btn highlight" onclick="triggerDailySummary()">
                 ✨ AI今日整理
             </button>
+            <button class="dock-btn" onclick="toggleNeuroLayer()" style="border-color: #00ffcc; color: #00ffcc;">
+                🧠 神经脑图
+            </button>
+
             <button class="dock-btn" onclick="openModal('bgModal')">
                 🖼 换背景
             </button>
@@ -555,6 +580,75 @@
         </div>
     </div>
 </div>
+   <!-- 8. 思维脑图 -->
+        <div id="neuro-layer" style="
+        position: fixed; inset: 0; z-index: 50;
+        background: #0a0a12; display: none; flex-direction: column;
+        animation: fadeIn 0.3s;
+    ">
+
+        <div style="
+            position: absolute; top: 0; left: 0; right: 0;
+            padding: 15px; display: flex; justify-content: space-between; align-items: center;
+            background: rgba(10, 10, 18, 0.85); backdrop-filter: blur(10px); z-index: 10;
+            border-bottom: 1px solid rgba(0, 255, 204, 0.2);
+        ">
+            <div style="color: #00ffcc; font-family: 'Courier New', monospace; font-weight: bold; display:flex; align-items:center; gap:10px;">
+                <span style="font-size:18px;">🧠 NeuroLink</span>
+                <span style="font-size:12px; color:rgba(0,255,204,0.6);" id="neuroStatus">Online</span>
+            </div>
+            <button onclick="toggleNeuroLayer()" style="
+                background: rgba(255, 69, 58, 0.2); border: 1px solid #ff453a; color: #ff453a;
+                padding: 6px 12px; border-radius: 15px; font-size: 12px; cursor: pointer;
+            ">✖ 关闭视图</button>
+        </div>
+
+
+        <div id="neuro-container" style="flex: 1; position: relative; overflow: hidden; cursor: grab; touch-action: none;">
+            <canvas id="neuroCanvas" style="display: block;"></canvas>
+
+
+            <div id="neuro-node-info" style="
+                position: absolute; bottom: 30px; left: 20px; right: 20px;
+                background: rgba(16, 16, 24, 0.95); border: 1px solid #00ffcc;
+                padding: 20px; border-radius: 16px; display: none;
+                box-shadow: 0 0 30px rgba(0, 255, 204, 0.15); color: #fff;
+                backdrop-filter: blur(10px); pointer-events: auto;
+            ">
+                <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                    <h3 id="neuro-title" style="color: #00ffcc; font-family: 'Courier New'; margin:0;"></h3>
+                    <span id="neuro-tag" style="font-size:10px; padding:2px 6px; border-radius:4px; border:1px solid #fff;">TAG</span>
+                </div>
+                <p id="neuro-desc" style="font-size: 13px; color: #ccc; line-height: 1.5; margin-bottom: 15px; max-height:100px; overflow-y:auto;"></p>
+
+
+                <div id="neuro-ai-box" style="
+                    background: rgba(0, 255, 204, 0.05); border-left: 2px solid #00ffcc;
+                    padding: 10px; font-size: 12px; color: #aaddd5; margin-bottom: 15px;
+                    display: none; white-space: pre-wrap;
+                "></div>
+
+                <div style="display: flex; gap: 10px;">
+                    <button onclick="neuroTriggerAI()" style="
+                        flex:1; background: rgba(0, 255, 204, 0.1); border: 1px solid #00ffcc;
+                        color: #00ffcc; padding: 10px; border-radius: 8px; font-size: 13px;
+                    ">🤖 AI 神经拓展</button>
+                    <button onclick="closeNeuroInfo()" style="
+                        width: 40px; background: rgba(255,255,255,0.1); border: none;
+                        color: #fff; border-radius: 8px; font-size: 16px;
+                    ">×</button>
+                </div>
+            </div>
+
+
+             <div style="position: absolute; bottom: 30px; right: 20px; display:flex; flex-direction:column; gap:10px;">
+                 <button onclick="neuroReset()" style="
+                    width:40px; height:40px; border-radius:50%; background:rgba(0,0,0,0.6);
+                    border:1px solid #444; color:#fff; font-size:18px;">⟲</button>
+             </div>
+        </div>
+    </div>
+
 
     <script>
         /* === 核心逻辑 === */
@@ -1272,6 +1366,309 @@ function displayModels(models) {
         modelListEl.appendChild(item);
     });
 }
+
+            // ================= 🧠 NeuroSystem Core (脑图核心逻辑) =================
+
+    const Neuro = {
+        canvas: document.getElementById('neuroCanvas'),
+        ctx: document.getElementById('neuroCanvas').getContext('2d'),
+        container: document.getElementById('neuro-container'),
+        nodes: [],
+        links: [],
+        scale: 1,
+        offsetX: 0,
+        offsetY: 0,
+        isDragging: false,
+        lastX: 0,
+        lastY: 0,
+        selectedNode: null,
+        rafId: null,
+
+        // 🎨 颜色配置表 (根据类型定义颜色)
+        colors: {
+            'language': { base: '#30D158', glow: 'rgba(48, 209, 88, 0.6)' },  // 绿色-语言
+            'science':  { base: '#0A84FF', glow: 'rgba(10, 132, 255, 0.6)' }, // 蓝色-理科
+            'fun':      { base: '#FF453A', glow: 'rgba(255, 69, 58, 0.6)' },  // 红色-娱乐
+            'misc':     { base: '#FFD60A', glow: 'rgba(255, 214, 10, 0.6)' }, // 黄色-杂物
+            'default':  { base: '#BF5AF2', glow: 'rgba(191, 90, 242, 0.6)' }  // 紫色-默认
+        },
+
+        init() {
+            this.resize();
+            window.addEventListener('resize', () => this.resize());
+            this.bindEvents();
+            // 首次同步数据
+            this.syncData();
+        },
+
+        resize() {
+            this.canvas.width = this.container.clientWidth;
+            this.canvas.height = this.container.clientHeight;
+        },
+
+        // 🔄 核心：数据同步 (从 DB.bubbles 读取并转化为节点)
+        syncData() {
+            this.nodes = [];
+            this.links = [];
+
+            // 1. 将所有Bubble转化为节点
+            DB.bubbles.forEach((b, index) => {
+                // 简单的自动分类逻辑 (您可以根据AI整理的tag来完善)
+                let type = 'misc';
+                // 这里暂时用简单关键词匹配，实际可接AI分析结果
+                if(/英语|单词|日语|说|文/.test(b.text)) type = 'language';
+                else if(/数|理|化|公式|代码|JS/.test(b.text)) type = 'science';
+                else if(/车|游戏|玩|电影/.test(b.text)) type = 'fun';
+
+                // 继承Bubble的颜色或使用分类色
+                let colorKey = type;
+
+                this.nodes.push({
+                    id: b.id,
+                    x: (Math.random() - 0.5) * 1000, // 初始随机分布
+                    y: (Math.random() - 0.5) * 1000,
+                    r: 8 + (b.text.length > 10 ? 4 : 0), // 字多球大
+                    text: b.text,
+                    desc: b.detail || b.text,
+                    ai: b.ai || '',
+                    type: type,
+                    color: this.colors[colorKey],
+                    vx: 0, vy: 0
+                });
+            });
+
+            // 2. 生成复杂的连接 (模拟神经网络，距离近的自动连，同类型的多连)
+            // 这里为了制造“复杂连接感”，我们混合随机和逻辑
+            this.nodes.forEach((node, i) => {
+                // 每个节点至少连2个其他节点
+                let linkCount = 2 + Math.floor(Math.random() * 3);
+                for(let k=0; k<linkCount; k++) {
+                    let targetIdx = Math.floor(Math.random() * this.nodes.length);
+                    if(targetIdx !== i) {
+                        this.links.push({ source: i, target: targetIdx });
+                    }
+                }
+            });
+        },
+
+        // 🖌️ 绘图循环
+        draw() {
+            const ctx = this.ctx;
+            const w = this.canvas.width;
+            const h = this.canvas.height;
+
+            ctx.fillStyle = '#0a0a12';
+            ctx.fillRect(0, 0, w, h);
+
+            ctx.save();
+            // 应用缩放和平移
+            ctx.translate(w/2 + this.offsetX, h/2 + this.offsetY);
+            ctx.scale(this.scale, this.scale);
+
+            // 1. 绘制复杂的神经网络连线
+            ctx.globalCompositeOperation = 'screen'; // 混合模式让线条叠加发光
+            this.links.forEach(link => {
+                let s = this.nodes[link.source];
+                let t = this.nodes[link.target];
+                if(!s || !t) return;
+
+                ctx.beginPath();
+                ctx.moveTo(s.x, s.y);
+                ctx.lineTo(t.x, t.y);
+
+                // 线条颜色渐变
+                let grad = ctx.createLinearGradient(s.x, s.y, t.x, t.y);
+                grad.addColorStop(0, s.color.base);
+                grad.addColorStop(1, t.color.base);
+
+                ctx.strokeStyle = grad;
+                ctx.globalAlpha = 0.15; // 半透明线条
+                ctx.lineWidth = 1.5 / this.scale;
+                ctx.stroke();
+            });
+
+            // 2. 绘制节点 (发光球体)
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.globalAlpha = 1;
+
+            this.nodes.forEach(node => {
+                // 物理微动 (漂浮感)
+                node.x += Math.sin(Date.now()*0.001 + node.id)*0.2;
+                node.y += Math.cos(Date.now()*0.001 + node.id)*0.2;
+
+                // 绘制外发光
+                let glowR = node.r * (node === this.selectedNode ? 2.5 : 1.5);
+                let grd = ctx.createRadialGradient(node.x, node.y, node.r*0.5, node.x, node.y, glowR);
+                grd.addColorStop(0, node.color.base);
+                grd.addColorStop(1, 'transparent');
+
+                ctx.fillStyle = grd;
+                ctx.beginPath();
+                ctx.arc(node.x, node.y, glowR, 0, Math.PI*2);
+                ctx.fill();
+
+                // 绘制核心实心圆
+                ctx.fillStyle = '#fff';
+                ctx.beginPath();
+                ctx.arc(node.x, node.y, node.r * 0.3, 0, Math.PI*2); // 核心小白点
+                ctx.fill();
+
+                // 文字 (仅在中观尺度或选中时显示)
+                if(this.scale > 0.6 || node === this.selectedNode) {
+                    ctx.fillStyle = '#fff';
+                    ctx.font = `${12/this.scale}px Arial`;
+                    ctx.textAlign = 'center';
+                    ctx.fillText(node.text.substring(0,6) + (node.text.length>6?'...':''), node.x, node.y + node.r + 15/this.scale);
+                }
+            });
+
+            ctx.restore();
+            if(document.getElementById('neuro-layer').style.display !== 'none') {
+                this.rafId = requestAnimationFrame(() => this.draw());
+            }
+        },
+
+        // 🎮 交互事件绑定
+        bindEvents() {
+            const handler = (e) => {
+                e.preventDefault();
+                let clientX = e.clientX || e.touches[0].clientX;
+                let clientY = e.clientY || e.touches[0].clientY;
+
+                if(e.type === 'mousedown' || e.type === 'touchstart') {
+                    this.isDragging = true;
+                    this.lastX = clientX;
+                    this.lastY = clientY;
+                    this.checkClick(clientX, clientY);
+                } else if(e.type === 'mousemove' || e.type === 'touchmove') {
+                    if(this.isDragging) {
+                        this.offsetX += clientX - this.lastX;
+                        this.offsetY += clientY - this.lastY;
+                        this.lastX = clientX;
+                        this.lastY = clientY;
+                    }
+                } else if(e.type === 'mouseup' || e.type === 'touchend') {
+                    this.isDragging = false;
+                }
+            };
+
+            ['mousedown','mousemove','mouseup','touchstart','touchmove','touchend'].forEach(evt => {
+                this.container.addEventListener(evt, handler, {passive: false});
+            });
+
+            // 滚轮缩放
+            this.container.addEventListener('wheel', e => {
+                e.preventDefault();
+                this.scale += e.deltaY * -0.001;
+                this.scale = Math.min(Math.max(0.2, this.scale), 5);
+            });
+        },
+
+        checkClick(cx, cy) {
+            const rect = this.canvas.getBoundingClientRect();
+            // 坐标转换：屏幕 -> 画布中心相对 -> 缩放修正 -> 偏移修正
+            const worldX = (cx - rect.left - this.canvas.width/2 - this.offsetX) / this.scale;
+            const worldY = (cy - rect.top - this.canvas.height/2 - this.offsetY) / this.scale;
+
+            let hit = false;
+            for(let node of this.nodes) {
+                // 宽松点击判定
+                if(Math.hypot(node.x - worldX, node.y - worldY) < node.r * 2 / this.scale + 20) {
+                    this.selectNode(node);
+                    hit = true;
+                    break;
+                }
+            }
+            if(!hit) {
+                this.selectedNode = null;
+                document.getElementById('neuro-node-info').style.display = 'none';
+            }
+        },
+
+        selectNode(node) {
+            this.selectedNode = node;
+            const info = document.getElementById('neuro-node-info');
+            info.style.display = 'block';
+
+            document.getElementById('neuro-title').innerText = node.text;
+            document.getElementById('neuro-tag').innerText = node.type.toUpperCase();
+            document.getElementById('neuro-tag').style.backgroundColor = node.color.base;
+            document.getElementById('neuro-desc').innerText = node.desc;
+
+            // 显示AI内容状态
+            const aiBox = document.getElementById('neuro-ai-box');
+            if(node.ai) {
+                aiBox.style.display = 'block';
+                aiBox.innerText = node.ai;
+            } else {
+                aiBox.style.display = 'none';
+            }
+
+            // 自动居中视角
+            // targetX * scale + offsetX = 0  => offsetX = -targetX * scale
+            // 简单的平滑过渡效果可以后续加，这里直接跳
+            // this.offsetX = -node.x * this.scale;
+            // this.offsetY = -node.y * this.scale;
+        }
+    };
+
+    // === 🔌 对外暴露的控制函数 ===
+
+    function toggleNeuroLayer() {
+        const el = document.getElementById('neuro-layer');
+        if(el.style.display === 'none') {
+            el.style.display = 'flex';
+            Neuro.init(); // 每次打开都重绘并同步最新数据
+            Neuro.draw();
+        } else {
+            el.style.display = 'none';
+            cancelAnimationFrame(Neuro.rafId);
+        }
+    }
+
+    function closeNeuroInfo() {
+        document.getElementById('neuro-node-info').style.display = 'none';
+        Neuro.selectedNode = null;
+    }
+
+    function neuroReset() {
+        Neuro.scale = 1;
+        Neuro.offsetX = 0;
+        Neuro.offsetY = 0;
+    }
+
+    async function neuroTriggerAI() {
+        if(!Neuro.selectedNode) return;
+        const node = Neuro.selectedNode;
+        const btn = document.querySelector('#neuro-node-info button');
+
+        btn.innerText = '🧠 神经网络联通中...';
+
+        // 调用Code 2原本的 callAI 函数
+        const prompt = `请基于知识点<q>"${node.text}"</q>，进行发散性思维拓展，关联到其他领域的知识（200字以内）：`;
+        const res = await callAI(prompt);
+
+        if(res) {
+            node.ai = res;
+            // 同步回原始 DB.bubbles 数据，确保保存
+            const originalBubble = DB.bubbles.find(b => b.id === node.id);
+            if(originalBubble) {
+                originalBubble.ai = res;
+                saveAll(); // 调用 Code 2 的保存函数
+            }
+
+            document.getElementById('neuro-ai-box').innerText = res;
+            document.getElementById('neuro-ai-box').style.display = 'block';
+        }
+
+        btn.innerText = '🤖 AI 神经拓展';
+    }
+
+    // 🚀 初始化钩子：在页面加载时顺便初始化脑图对象
+    window.addEventListener('load', () => {
+        Neuro.init();
+    });
+
 // === 10. 修改callAI函数，使用配置的模型 ===
 // 原来的callAI函数已经使用DB.config.model，不需要修改
 // 但可以添加一个获取当前模型的小函数
@@ -1281,6 +1678,7 @@ function getCurrentModel() {
     </script>
 </body>
 </html>
+
 
 
 
