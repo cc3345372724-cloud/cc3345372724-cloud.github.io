@@ -1,0 +1,545 @@
+```html
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>NeuroLink OS - Mind Map</title>
+    <style>
+        /* === 核心样式重置 === */
+        * { margin: 0; padding: 0; box-sizing: border-box; touch-action: none; }
+        body {
+            background-color: #050508; /* 更深邃的宇宙黑 */
+            color: #00ffcc;
+            font-family: 'Courier New', Courier, monospace;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* === 画布容器 === */
+        #canvas-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            cursor: grab;
+            background: radial-gradient(circle at center, #1a1a24 0%, #050508 100%); /* 伪3D背景 */
+        }
+        canvas { display: block; }
+
+        /* === UI 层 (悬浮在画布之上) === */
+        .ui-layer {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; /* 让点击穿透到画布 */
+            display: flex; flex-direction: column; justify-content: space-between;
+            padding: 15px;
+            z-index: 10;
+        }
+
+        /* === 专属顶部栏 (极简风格) === */
+        .top-bar {
+            display: flex; justify-content: space-between; align-items: flex-start;
+            pointer-events: auto;
+        }
+
+        /* 退出按钮 */
+        .exit-btn {
+            width: 40px; height: 40px; border-radius: 50%;
+            background: rgba(255, 69, 58, 0.2); border: 1px solid #ff453a;
+            color: #ff453a; font-size: 18px; display: flex; align-items: center; justify-content: center;
+            cursor: pointer; backdrop-filter: blur(5px); transition: all 0.3s;
+        }
+        .exit-btn:active { transform: scale(0.9); background: #ff453a; color: #000; }
+
+        /* 右上角功能区 */
+        .function-area {
+            display: flex; flex-direction: column; gap: 10px; align-items: flex-end;
+        }
+        .func-btn {
+            background: rgba(0, 255, 204, 0.1); border: 1px solid rgba(0, 255, 204, 0.3);
+            color: #00ffcc; padding: 6px 12px; border-radius: 15px; font-size: 12px;
+            cursor: pointer; backdrop-filter: blur(5px); pointer-events: auto;
+            transition: 0.2s;
+        }
+        .func-btn:hover, .func-btn.active { background: rgba(0, 255, 204, 0.8); color: #000; }
+
+        /* 神经元类型面板 */
+        .type-panel {
+            background: rgba(10, 10, 18, 0.95); border: 1px solid #333;
+            border-radius: 10px; padding: 10px; margin-top: 5px;
+            display: none; pointer-events: auto;
+        }
+        .type-item {
+            display: flex; align-items: center; gap: 8px; margin-bottom: 5px; font-size: 12px;
+        }
+        .color-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+        /* === 底部节点信息面板 === */
+        .node-info {
+            background: rgba(20, 20, 30, 0.9); border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 20px; border-radius: 16px; pointer-events: auto;
+            box-shadow: 0 0 30px rgba(0, 255, 204, 0.1);
+            backdrop-filter: blur(10px);
+            display: none; /* 默认隐藏 */
+            margin-bottom: 20px;
+            transform: translateY(20px); opacity: 0;
+            transition: all 0.3s;
+        }
+        .node-info.show { transform: translateY(0); opacity: 1; display: block; }
+
+        .node-title { font-size: 18px; font-weight: bold; margin-bottom: 8px; color: #fff; }
+        .node-desc { font-size: 13px; color: #aaa; margin-bottom: 15px; line-height: 1.5; max-height: 100px; overflow-y: auto; }
+
+        /* 神经分裂按钮 */
+        .split-btn {
+            width: 100%; padding: 10px; border-radius: 8px;
+            background: linear-gradient(90deg, #ff0055, #ff00cc); border: none;
+            color: #fff; font-weight: bold; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; gap: 5px;
+            box-shadow: 0 0 10px rgba(255, 0, 85, 0.4);
+        }
+        .split-btn:active { transform: scale(0.98); }
+
+        /* 搜索/API拓展栏 */
+        .search-bar { display: flex; gap: 8px; margin-top: 10px; }
+        .search-input {
+            flex: 1; background: #111; border: 1px solid #333; color: #fff;
+            padding: 8px; border-radius: 6px; outline: none;
+        }
+
+        /* === 视觉特效 === */
+        .loading-pulse {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            font-size: 12px; color: #00ffcc; pointer-events: none; opacity: 0; transition: opacity 0.3s;
+        }
+
+        /* 存储区域指示器 (模拟大脑分区) */
+        .brain-zone {
+            position: absolute; font-size: 100px; font-weight: bold; opacity: 0.03;
+            pointer-events: none; user-select: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="canvas-container">
+        <canvas id="neuroCanvas"></canvas>
+
+        <!-- 大脑分区背景字 -->
+        <div class="brain-zone" style="top: 10%; left: 10%;">LOGIC</div>
+        <div class="brain-zone" style="bottom: 10%; right: 10%;">CREATIVE</div>
+
+        <div class="ui-layer">
+            <!-- 顶部栏 -->
+            <div class="top-bar">
+                <div class="exit-btn" onclick="goBack()">✕</div>
+                <div class="function-area">
+                    <button class="func-btn" onclick="toggleTypePanel()">🧬 神经元管理</button>
+                    <div class="type-panel" id="typePanel">
+                        <!-- 类型列表将由 JS 动态生成 -->
+                    </div>
+                    <div style="font-size: 10px; color: #555; text-align: right;">NeuroLink v2.0</div>
+                </div>
+            </div>
+
+            <div class="loading-pulse" id="loadingTip">NEURAL SYNCING...</div>
+
+            <!-- 底部信息面板 -->
+            <div class="node-info" id="nodeInfoPanel">
+                <div class="node-title" id="nodeTitle">节点名称</div>
+                <div class="node-desc" id="nodeDesc">节点描述内容...</div>
+
+                <button class="split-btn" onclick="triggerSplit()">
+                    <span>⚡ 神经分裂 (Neural Split)</span>
+                </button>
+
+                <div class="search-bar">
+                    <input type="text" class="search-input" id="apiInput" placeholder="输入关联词进行AI拓展...">
+                    <button class="func-btn" onclick="triggerAPI()">拓展</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // === 配置与状态 ===
+        const CONFIG = {
+            colors: {
+                'language': '#30D158', // 绿色 (语言)
+                'science': '#0A84FF',  // 蓝色 (理科)
+                'entertainment': '#FF453A', // 红色 (娱乐/赛车)
+                'misc': '#BF5AF2'      // 紫色 (杂物/自定义)
+            },
+            types: [
+                { id: 'language', name: '语言学', color: '#30D158' },
+                { id: 'science', name: '理科/技术', color: '#0A84FF' },
+                { id: 'entertainment', name: '娱乐/赛车', color: '#FF453A' },
+                { id: 'misc', name: '杂项/记忆', color: '#BF5AF2' }
+            ]
+        };
+
+        const canvas = document.getElementById('neuroCanvas');
+        const ctx = canvas.getContext('2d');
+        const container = document.getElementById('canvas-container');
+
+        // 视图状态
+        let width, height;
+        let nodes = [];
+        let links = [];
+        let scale = 1; // 缩放比例
+        let offsetX = 0, offsetY = 0; // 偏移量
+        let isDragging = false;
+        let lastX, lastY;
+        let selectedNode = null;
+
+        // 双指缩放支持
+        let initialDistance = 0;
+        let initialScale = 1;
+
+        // === 初始化 ===
+        function init() {
+            resize();
+            loadData(); // 尝试加载数据
+            renderTypePanel();
+            animate();
+        }
+
+        function resize() {
+            width = container.clientWidth;
+            height = container.clientHeight;
+            canvas.width = width;
+            canvas.height = height;
+        }
+
+        // === 数据加载逻辑 ===
+        function loadData() {
+            // 1. 尝试从 localStorage 获取主APP的数据
+            const rawData = localStorage.getItem('mb_bubbles');
+            if (rawData) {
+                const bubbles = JSON.parse(rawData);
+                // 转换数据格式
+                nodes = bubbles.map((b, i) => ({
+                    id: b.id,
+                    x: (Math.random() - 0.5) * 1000, // 随机分布
+                    y: (Math.random() - 0.5) * 1000,
+                    r: 15 + Math.random() * 10,
+                    color: getColorByType(b.text), // 智能识别颜色
+                    label: b.text.substring(0, 10) + (b.text.length>10?'...':''),
+                    fullText: b.text,
+                    desc: b.ai || '暂无AI拓展内容...',
+                    type: 'misc', // 默认为杂项，后续可加AI分类
+                    expanded: false // 是否已分裂
+                }));
+            } else {
+                // 无数据时生成演示数据
+                generateDemoNodes(20);
+            }
+
+            // 生成随机连接 (模拟神经网络)
+            rebuildLinks();
+        }
+
+        function generateDemoNodes(count) {
+            for (let i = 0; i < count; i++) {
+                const typeObj = CONFIG.types[Math.floor(Math.random() * CONFIG.types.length)];
+                nodes.push({
+                    id: Date.now() + i,
+                    x: (Math.random() - 0.5) * 1500,
+                    y: (Math.random() - 0.5) * 1500,
+                    r: 10 + Math.random() * 20,
+                    color: typeObj.color,
+                    label: `Node_${i}`,
+                    fullText: `这是关于 ${typeObj.name} 的核心知识点 #${i}`,
+                    desc: '点击“神经分裂”以获取更多关联信息...',
+                    type: typeObj.id,
+                    expanded: false
+                });
+            }
+        }
+
+        function rebuildLinks() {
+            links = [];
+            nodes.forEach((node, i) => {
+                // 每个节点随机连接 1-3 个最近的邻居
+                // 这里简单处理为随机连接，实际可用 K-Nearest Neighbors
+                let targets = Math.floor(Math.random() * 2) + 1;
+                for (let j = 0; j < targets; j++) {
+                    let targetIdx = Math.floor(Math.random() * nodes.length);
+                    if (targetIdx !== i) {
+                        links.push({ source: node, target: nodes[targetIdx] });
+                    }
+                }
+            });
+            document.getElementById('nodeCount') && (document.getElementById('nodeCount').innerText = nodes.length);
+        }
+
+        // 简单的关键词颜色匹配
+        function getColorByType(text) {
+            if (/语言|英语|词汇|grammar/i.test(text)) return CONFIG.colors.language;
+            if (/数学|物理|公式|代码|逻辑/i.test(text)) return CONFIG.colors.science;
+            if (/赛车|游戏|电影|音乐/i.test(text)) return CONFIG.colors.entertainment;
+            return CONFIG.colors.misc;
+        }
+
+        // === 交互逻辑 (核心) ===
+
+        // 鼠标/单指拖拽
+        container.addEventListener('mousedown', startDrag);
+        container.addEventListener('touchstart', e => {
+            if (e.touches.length === 2) {
+                // 双指缩放开始
+                isDragging = false;
+                initialDistance = getDistance(e.touches[0], e.touches[1]);
+                initialScale = scale;
+            } else {
+                startDrag(e.touches[0]);
+            }
+        });
+
+        function startDrag(e) {
+            isDragging = true;
+            lastX = e.clientX;
+            lastY = e.clientY;
+
+            // 点击检测
+            const worldX = (e.clientX - width/2 - offsetX) / scale;
+            const worldY = (e.clientY - height/2 - offsetY) / scale;
+            checkClick(worldX, worldY);
+        }
+
+        container.addEventListener('mousemove', moveDrag);
+        container.addEventListener('touchmove', e => {
+            e.preventDefault();
+            if (e.touches.length === 2) {
+                // 双指缩放中
+                const dist = getDistance(e.touches[0], e.touches[1]);
+                const delta = dist / initialDistance;
+                scale = Math.min(Math.max(0.1, initialScale * delta), 5); // 限制缩放范围 0.1x - 5x
+            } else if (isDragging) {
+                moveDrag(e.touches[0]);
+            }
+        });
+
+        function moveDrag(e) {
+            if (!isDragging) return;
+            const dx = e.clientX - lastX;
+            const dy = e.clientY - lastY;
+            offsetX += dx;
+            offsetY += dy;
+            lastX = e.clientX;
+            lastY = e.clientY;
+        }
+
+        container.addEventListener('mouseup', () => isDragging = false);
+        container.addEventListener('touchend', () => isDragging = false);
+
+        // 滚轮缩放
+        container.addEventListener('wheel', e => {
+            e.preventDefault();
+            const zoomSpeed = 0.001;
+            scale += e.deltaY * -zoomSpeed;
+            scale = Math.min(Math.max(0.1, scale), 5);
+        }, { passive: false });
+
+        function getDistance(t1, t2) {
+            return Math.sqrt(Math.pow(t1.clientX - t2.clientX, 2) + Math.pow(t1.clientY - t2.clientY, 2));
+        }
+
+        function checkClick(wx, wy) {
+            let clicked = false;
+            // 倒序遍历，优先选中上层节点
+            for (let i = nodes.length - 1; i >= 0; i--) {
+                const n = nodes[i];
+                const dist = Math.sqrt((n.x - wx)**2 + (n.y - wy)**2);
+                if (dist < n.r + 5/scale) { // 增加点击判定容错
+                    selectNode(n);
+                    clicked = true;
+                    break;
+                }
+            }
+            if (!clicked) deselectNode();
+        }
+
+        function selectNode(node) {
+            selectedNode = node;
+            const panel = document.getElementById('nodeInfoPanel');
+            document.getElementById('nodeTitle').innerText = node.label;
+            document.getElementById('nodeDesc').innerText = node.fullText + '\n\n' + node.desc;
+            panel.classList.add('show');
+
+            // 聚焦动画
+            // targetOffsetX = -node.x * scale; ... (可加平滑过渡)
+        }
+
+        function deselectNode() {
+            selectedNode = null;
+            document.getElementById('nodeInfoPanel').classList.remove('show');
+        }
+
+        // === 神经分裂 (Split) 逻辑 ===
+        function triggerSplit() {
+            if (!selectedNode) return;
+
+            const btn = document.querySelector('.split-btn span');
+            btn.innerText = "⚡ 分裂中 (Splitting)...";
+
+            // 模拟 API 延迟
+            setTimeout(() => {
+                const count = 3; // 分裂出3个子节点
+                for (let i = 0; i < count; i++) {
+                    const angle = (Math.PI * 2 / count) * i + Math.random();
+                    const dist = 100 + Math.random() * 50;
+
+                    const child = {
+                        id: Date.now() + i,
+                        x: selectedNode.x + Math.cos(angle) * dist,
+                        y: selectedNode.y + Math.sin(angle) * dist,
+                        r: selectedNode.r * 0.8, // 子节点稍小
+                        color: selectedNode.color,
+                        label: `${selectedNode.label}_sub${i}`,
+                        fullText: `[分裂] 关于 ${selectedNode.label} 的延伸思考...`,
+                        desc: '自动生成的关联神经元。',
+                        type: selectedNode.type,
+                        expanded: false
+                    };
+
+                    nodes.push(child);
+                    links.push({ source: selectedNode, target: child });
+                }
+
+                selectedNode.expanded = true;
+                btn.innerText = "⚡ 神经分裂 (Neural Split)";
+                // 更新视图连接
+                // rebuildLinks(); // 如果是push进去的，其实不用全重构，直接画就行
+            }, 500);
+        }
+
+        function triggerAPI() {
+            // 模拟 API 拓展，实际应调用 GPT
+            const val = document.getElementById('apiInput').value;
+            if(val) {
+                document.getElementById('nodeDesc').innerText += `\n\n[AI]: 正在为您检索关于 "${val}" 的深度信息... (模拟)`;
+                document.getElementById('apiInput').value = '';
+            }
+        }
+
+        // === 渲染循环 ===
+        function animate() {
+            ctx.fillStyle = '#050508';
+            ctx.fillRect(0, 0, width, height);
+
+            ctx.save();
+            // 应用变换
+            ctx.translate(width/2 + offsetX, height/2 + offsetY);
+            ctx.scale(scale, scale);
+
+            // 1. 绘制连线 (Synapses)
+            ctx.lineWidth = 1.5 / scale;
+            for (let link of links) {
+                ctx.strokeStyle = `rgba(0, 255, 204, ${0.15 * Math.min(1, scale)})`; // 远看淡，近看清
+                ctx.beginPath();
+                ctx.moveTo(link.source.x, link.source.y);
+                ctx.lineTo(link.target.x, link.target.y);
+                ctx.stroke();
+            }
+
+            // 2. 绘制节点 (Neurons)
+            for (let node of nodes) {
+                // 呼吸动画
+                const breathe = Math.sin(Date.now() * 0.002 + node.id) * 2;
+
+                // 绘制光晕
+                if (scale > 0.5) { // 只有放大时才画光晕，优化性能
+                    const grad = ctx.createRadialGradient(node.x, node.y, node.r * 0.5, node.x, node.y, node.r * 2);
+                    grad.addColorStop(0, node.color);
+                    grad.addColorStop(1, 'rgba(0,0,0,0)');
+                    ctx.fillStyle = grad;
+                    ctx.globalAlpha = 0.3;
+                    ctx.beginPath();
+                    ctx.arc(node.x, node.y, node.r * 2 + breathe, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.globalAlpha = 1.0;
+                }
+
+                // 绘制核心
+                ctx.fillStyle = node.color;
+                ctx.beginPath();
+                ctx.arc(node.x, node.y, node.r, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 绘制高光边缘
+                ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+                ctx.lineWidth = 1 / scale;
+                ctx.stroke();
+
+                // 选中态
+                if (node === selectedNode) {
+                    ctx.strokeStyle = '#fff';
+                    ctx.lineWidth = 3 / scale;
+                    ctx.stroke();
+                    // 连线高亮
+                    // (此处可加逻辑高亮相关连线)
+                }
+
+                // LOD (Level of Detail) 文本渲染
+                ctx.fillStyle = '#fff';
+                ctx.textAlign = 'center';
+
+                if (scale > 1.2) {
+                    // 1. 微观模式：显示详细内容
+                    ctx.font = `${10/scale + 4}px Courier New`;
+                    ctx.fillText(node.fullText.substring(0, 15), node.x, node.y + node.r + 15/scale);
+                } else if (scale > 0.3) {
+                    // 2. 中观模式：显示标题
+                    ctx.font = `${10/scale + 8}px Courier New`;
+                    ctx.fillText(node.label, node.x, node.y + node.r + 10/scale);
+                }
+                // 3. 宏观模式：不显示字，只显示点
+            }
+
+            ctx.restore();
+            requestAnimationFrame(animate);
+        }
+
+        // === UI 辅助 ===
+        function goBack() {
+            window.location.href = 'index.html'; // 返回主页
+        }
+
+        function toggleTypePanel() {
+            const p = document.getElementById('typePanel');
+            p.style.display = p.style.display === 'block' ? 'none' : 'block';
+        }
+
+        function renderTypePanel() {
+            const container = document.getElementById('typePanel');
+            container.innerHTML = '';
+            CONFIG.types.forEach(t => {
+                const div = document.createElement('div');
+                div.className = 'type-item';
+                div.innerHTML = `
+                    <div class="color-dot" style="background:${t.color}"></div>
+                    <input type="text" value="${t.name}" style="background:none; border:none; color:#fff; width:80px;">
+                    <input type="color" value="${t.color}" onchange="updateTypeColor('${t.id}', this.value)">
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function updateTypeColor(id, color) {
+            CONFIG.colors[id] = color;
+            // 更新现有节点颜色
+            nodes.forEach(n => {
+                if (n.type === id) n.color = color;
+            });
+        }
+
+        window.addEventListener('resize', resize);
+        init();
+
+    </script>
+</body>
+</html>
+```
