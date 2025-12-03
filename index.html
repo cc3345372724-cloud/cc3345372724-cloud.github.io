@@ -318,25 +318,56 @@
 #modelList::-webkit-scrollbar-thumb:hover {
     background: rgba(255,255,255,0.3);
 }
-
-            /* === 🧠 神经脑图专用样式 === */
+    /* === 🧠 神经脑图专用样式 (v2.0 Refined) === */
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-    /* 节点脉冲动画 */
-    @keyframes nodePulse {
-        0% { box-shadow: 0 0 0 0 rgba(0, 255, 204, 0.4); }
-        70% { box-shadow: 0 0 0 10px rgba(0, 255, 204, 0); }
-        100% { box-shadow: 0 0 0 0 rgba(0, 255, 204, 0); }
+    /* 脑图容器全屏层级修正 */
+    #neuro-layer {
+        background: #050505; /* 更深沉的背景，减少刺眼 */
     }
 
-    /* 模拟API连接线特效 */
-    .neuro-link-pulse {
-        position: absolute;
-        border-radius: 50%;
-        background: rgba(255, 255, 255, 0.8);
-        width: 4px; height: 4px;
-        pointer-events: none;
-        box-shadow: 0 0 10px #fff;
+    /* 脑图专属顶部栏 */
+    .neuro-top-bar {
+        position: absolute; top: 0; left: 0; right: 0;
+        height: 60px; padding: 0 15px;
+        background: rgba(10, 10, 12, 0.9); backdrop-filter: blur(15px);
+        border-bottom: 1px solid rgba(255,255,255,0.08);
+        display: flex; justify-content: space-between; align-items: center;
+        z-index: 20; padding-top: env(safe-area-inset-top); /* 适配刘海屏 */
+    }
+
+    /* 退出按钮 */
+    .neuro-exit-btn {
+        background: rgba(255, 69, 58, 0.15); border: 1px solid rgba(255, 69, 58, 0.3);
+        color: #FF453A; padding: 6px 14px; border-radius: 16px; font-size: 13px;
+    }
+
+    /* 节点微观视角内容框 (当放大到一定程度显示) */
+    .node-micro-view {
+        position: absolute; pointer-events: none;
+        background: rgba(30, 30, 35, 0.95);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 8px; padding: 8px;
+        color: #eee; font-size: 12px; line-height: 1.4;
+        width: 160px; white-space: pre-wrap;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        opacity: 0; transition: opacity 0.2s;
+        z-index: 5;
+    }
+
+    /* 类型管理列表项 */
+    .type-mgr-item {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 12px; background: rgba(255,255,255,0.03);
+        margin-bottom: 8px; border-radius: 10px;
+    }
+    .color-picker-dot {
+        width: 24px; height: 24px; border-radius: 50%; border: 2px solid #fff;
+        cursor: pointer; position: relative; overflow: hidden;
+    }
+    .color-picker-input {
+        position: absolute; top: -10px; left: -10px; width: 50px; height: 50px;
+        opacity: 0; cursor: pointer;
     }
 
     </style>
@@ -581,26 +612,23 @@
     </div>
 </div>
    <!-- 8. 思维脑图 -->
-        <div id="neuro-layer" style="
+    <div id="neuro-layer" style="
         position: fixed; inset: 0; z-index: 50;
-        background: #0a0a12; display: none; flex-direction: column;
+        display: none; flex-direction: column;
         animation: fadeIn 0.3s;
     ">
 
-        <div style="
-            position: absolute; top: 0; left: 0; right: 0;
-            padding: 15px; display: flex; justify-content: space-between; align-items: center;
-            background: rgba(10, 10, 18, 0.85); backdrop-filter: blur(10px); z-index: 10;
-            border-bottom: 1px solid rgba(0, 255, 204, 0.2);
-        ">
-            <div style="color: #00ffcc; font-family: 'Courier New', monospace; font-weight: bold; display:flex; align-items:center; gap:10px;">
-                <span style="font-size:18px;">🧠 NeuroLink</span>
-                <span style="font-size:12px; color:rgba(0,255,204,0.6);" id="neuroStatus">Online</span>
+        <div class="neuro-top-bar">
+
+            <button class="neuro-exit-btn" onclick="toggleNeuroLayer()">
+                ← 退出脑图
+            </button>
+
+
+            <div style="display: flex; gap: 15px;">
+                <button class="icon-btn" onclick="openModal('neuroStatsModal'); Neuro.renderStats();" style="font-size:18px;">📊</button>
+                <button class="icon-btn" onclick="openModal('neuroTypeModal'); Neuro.renderTypeMgr();" style="font-size:18px;">🏷️</button>
             </div>
-            <button onclick="toggleNeuroLayer()" style="
-                background: rgba(255, 69, 58, 0.2); border: 1px solid #ff453a; color: #ff453a;
-                padding: 6px 12px; border-radius: 15px; font-size: 12px; cursor: pointer;
-            ">✖ 关闭视图</button>
         </div>
 
 
@@ -608,44 +636,62 @@
             <canvas id="neuroCanvas" style="display: block;"></canvas>
 
 
-            <div id="neuro-node-info" style="
-                position: absolute; bottom: 30px; left: 20px; right: 20px;
-                background: rgba(16, 16, 24, 0.95); border: 1px solid #00ffcc;
-                padding: 20px; border-radius: 16px; display: none;
-                box-shadow: 0 0 30px rgba(0, 255, 204, 0.15); color: #fff;
-                backdrop-filter: blur(10px); pointer-events: auto;
-            ">
-                <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
-                    <h3 id="neuro-title" style="color: #00ffcc; font-family: 'Courier New'; margin:0;"></h3>
-                    <span id="neuro-tag" style="font-size:10px; padding:2px 6px; border-radius:4px; border:1px solid #fff;">TAG</span>
-                </div>
-                <p id="neuro-desc" style="font-size: 13px; color: #ccc; line-height: 1.5; margin-bottom: 15px; max-height:100px; overflow-y:auto;"></p>
-
-
-                <div id="neuro-ai-box" style="
-                    background: rgba(0, 255, 204, 0.05); border-left: 2px solid #00ffcc;
-                    padding: 10px; font-size: 12px; color: #aaddd5; margin-bottom: 15px;
-                    display: none; white-space: pre-wrap;
-                "></div>
-
-                <div style="display: flex; gap: 10px;">
-                    <button onclick="neuroTriggerAI()" style="
-                        flex:1; background: rgba(0, 255, 204, 0.1); border: 1px solid #00ffcc;
-                        color: #00ffcc; padding: 10px; border-radius: 8px; font-size: 13px;
-                    ">🤖 AI 神经拓展</button>
-                    <button onclick="closeNeuroInfo()" style="
-                        width: 40px; background: rgba(255,255,255,0.1); border: none;
-                        color: #fff; border-radius: 8px; font-size: 16px;
-                    ">×</button>
-                </div>
+            <div style="position: absolute; bottom: 30px; right: 20px; z-index: 10;">
+                 <button onclick="Neuro.resetView()" style="
+                    width:44px; height:44px; border-radius:50%; background:rgba(30,30,35,0.8);
+                    border:1px solid rgba(255,255,255,0.2); color:#fff; font-size:20px;
+                    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+                 ">⟲</button>
             </div>
 
 
-             <div style="position: absolute; bottom: 30px; right: 20px; display:flex; flex-direction:column; gap:10px;">
-                 <button onclick="neuroReset()" style="
-                    width:40px; height:40px; border-radius:50%; background:rgba(0,0,0,0.6);
-                    border:1px solid #444; color:#fff; font-size:18px;">⟲</button>
-             </div>
+            <div id="neuro-node-info" style="
+                position: absolute; bottom: 30px; left: 20px; right: 80px; /* 避开右下角按钮 */
+                background: rgba(20, 20, 25, 0.95); border: 1px solid rgba(255,255,255,0.15);
+                padding: 20px; border-radius: 16px; display: none;
+                box-shadow: 0 10px 40px rgba(0,0,0,0.4); color: #fff;
+                backdrop-filter: blur(10px); pointer-events: auto; z-index: 20;
+            ">
+                <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                    <h3 id="neuro-title" style="color: #fff; font-weight:600; margin:0;"></h3>
+                    <span id="neuro-tag" style="font-size:10px; padding:2px 8px; border-radius:4px; font-weight:bold; color:#000;">TAG</span>
+                </div>
+                <p id="neuro-desc" style="font-size: 13px; color: #bbb; line-height: 1.5; margin-bottom: 15px; max-height:100px; overflow-y:auto;"></p>
+
+                <div style="display: flex; gap: 10px;">
+                    <button id="neuro-ai-btn" onclick="Neuro.triggerExpand()" style="
+                        flex:1; background: rgba(10, 132, 255, 0.15); border: 1px solid rgba(10, 132, 255, 0.3);
+                        color: #0A84FF; padding: 10px; border-radius: 8px; font-size: 13px; font-weight:500;
+                    ">⚡ AI 神经裂变</button>
+                    <button onclick="document.getElementById('neuro-node-info').style.display='none'; Neuro.selectedNode=null;" style="
+                        width: 40px; background: rgba(255,255,255,0.05); border: none;
+                        color: #fff; border-radius: 8px; font-size: 18px;
+                    ">×</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="modal-overlay" id="neuroStatsModal">
+        <div class="modal-card">
+            <div class="modal-header"><span>🧠 神经元统计</span><span class="close-icon" onclick="closeModal('neuroStatsModal')">×</span></div>
+            <div class="stats-wrap">
+                <div class="pie-chart" id="neuroPieChart"></div>
+                <div class="legend-box" id="neuroLegendBox"></div>
+            </div>
+            <div id="neuroStatsList" style="font-size:13px; color:var(--text-sub); text-align:center;"></div>
+        </div>
+    </div>
+
+
+    <div class="modal-overlay" id="neuroTypeModal">
+        <div class="modal-card">
+            <div class="modal-header"><span>🏷️ 类型与颜色管理</span><span class="close-icon" onclick="closeModal('neuroTypeModal')">×</span></div>
+            <div id="typeMgrList" style="max-height: 300px; overflow-y: auto;"></div>
+            <div style="margin-top:15px; font-size:12px; color:var(--text-sub); text-align:center;">
+                * 颜色修改后实时生效
+            </div>
         </div>
     </div>
 
@@ -1367,38 +1413,50 @@ function displayModels(models) {
     });
 }
 
-            // ================= 🧠 NeuroSystem Core (脑图核心逻辑) =================
+    // ================= 🧠 NeuroSystem Core v2.0 (Refined) =================
 
     const Neuro = {
         canvas: document.getElementById('neuroCanvas'),
         ctx: document.getElementById('neuroCanvas').getContext('2d'),
         container: document.getElementById('neuro-container'),
+
+        // 核心数据
         nodes: [],
         links: [],
+
+        // 视图状态
         scale: 1,
         offsetX: 0,
         offsetY: 0,
+
+        // 交互状态
         isDragging: false,
         lastX: 0,
         lastY: 0,
+        lastDist: 0, // 双指距离
         selectedNode: null,
         rafId: null,
 
-        // 🎨 颜色配置表 (根据类型定义颜色)
-        colors: {
-            'language': { base: '#30D158', glow: 'rgba(48, 209, 88, 0.6)' },  // 绿色-语言
-            'science':  { base: '#0A84FF', glow: 'rgba(10, 132, 255, 0.6)' }, // 蓝色-理科
-            'fun':      { base: '#FF453A', glow: 'rgba(255, 69, 58, 0.6)' },  // 红色-娱乐
-            'misc':     { base: '#FFD60A', glow: 'rgba(255, 214, 10, 0.6)' }, // 黄色-杂物
-            'default':  { base: '#BF5AF2', glow: 'rgba(191, 90, 242, 0.6)' }  // 紫色-默认
-        },
+        // 🎨 默认配置 & 存储读取
+        config: JSON.parse(localStorage.getItem('mb_neuro_cfg') || JSON.stringify({
+            types: {
+                'language': { name: '语言', color: '#32D74B' }, // iOS Green (不荧光)
+                'science':  { name: '理科', color: '#0A84FF' }, // iOS Blue
+                'fun':      { name: '娱乐', color: '#FF453A' }, // iOS Red
+                'life':     { name: '生活', color: '#FFD60A' }, // iOS Yellow
+                'misc':     { name: '杂项', color: '#BF5AF2' }  // iOS Purple
+            }
+        })),
 
         init() {
             this.resize();
             window.addEventListener('resize', () => this.resize());
             this.bindEvents();
-            // 首次同步数据
             this.syncData();
+        },
+
+        saveConfig() {
+            localStorage.setItem('mb_neuro_cfg', JSON.stringify(this.config));
         },
 
         resize() {
@@ -1406,67 +1464,73 @@ function displayModels(models) {
             this.canvas.height = this.container.clientHeight;
         },
 
-        // 🔄 核心：数据同步 (从 DB.bubbles 读取并转化为节点)
+        // 🔄 数据同步：DB.bubbles -> Neuro.nodes
         syncData() {
+            // 如果已经有节点（比如刚扩展过），尽量保留位置，只增量添加？
+            // 简单起见，这里每次打开重新生成布局，但ID匹配的节点位置可以后续优化
+            // v2.0: 为了保留拓展出的临时节点，我们只在首次打开或手动刷新时全量同步
+            if(this.nodes.length > 0 && DB.bubbles.length === this.nodes.filter(n=>!n.isTemp).length) return;
+
             this.nodes = [];
             this.links = [];
+            const map = new Map(); // 用于快速索引
 
-            // 1. 将所有Bubble转化为节点
-            DB.bubbles.forEach((b, index) => {
-                // 简单的自动分类逻辑 (您可以根据AI整理的tag来完善)
-                let type = 'misc';
-                // 这里暂时用简单关键词匹配，实际可接AI分析结果
-                if(/英语|单词|日语|说|文/.test(b.text)) type = 'language';
-                else if(/数|理|化|公式|代码|JS/.test(b.text)) type = 'science';
-                else if(/车|游戏|玩|电影/.test(b.text)) type = 'fun';
-
-                // 继承Bubble的颜色或使用分类色
-                let colorKey = type;
-
-                this.nodes.push({
+            DB.bubbles.forEach(b => {
+                const type = this.classify(b.text);
+                const node = {
                     id: b.id,
-                    x: (Math.random() - 0.5) * 1000, // 初始随机分布
-                    y: (Math.random() - 0.5) * 1000,
-                    r: 8 + (b.text.length > 10 ? 4 : 0), // 字多球大
+                    x: (Math.random() - 0.5) * 800,
+                    y: (Math.random() - 0.5) * 800,
+                    r: this.calcRadius(b.text),
                     text: b.text,
                     desc: b.detail || b.text,
-                    ai: b.ai || '',
-                    type: type,
-                    color: this.colors[colorKey],
+                    type: type, // key
+                    isTemp: false,
                     vx: 0, vy: 0
-                });
+                };
+                this.nodes.push(node);
+                map.set(b.id, this.nodes.length - 1);
             });
 
-            // 2. 生成复杂的连接 (模拟神经网络，距离近的自动连，同类型的多连)
-            // 这里为了制造“复杂连接感”，我们混合随机和逻辑
+            // 生成随机连接
             this.nodes.forEach((node, i) => {
-                // 每个节点至少连2个其他节点
-                let linkCount = 2 + Math.floor(Math.random() * 3);
+                let linkCount = 1 + Math.floor(Math.random() * 2);
                 for(let k=0; k<linkCount; k++) {
                     let targetIdx = Math.floor(Math.random() * this.nodes.length);
-                    if(targetIdx !== i) {
-                        this.links.push({ source: i, target: targetIdx });
-                    }
+                    if(targetIdx !== i) this.links.push({ source: i, target: targetIdx });
                 }
             });
         },
 
-        // 🖌️ 绘图循环
+        // 🧠 简单关键词分类
+        classify(text) {
+            const txt = text.toLowerCase();
+            if(/英语|word|单词|日语/.test(txt)) return 'language';
+            if(/代码|js|css|公式|算|理|化/.test(txt)) return 'science';
+            if(/游|玩|剧|影|吃/.test(txt)) return 'fun';
+            if(/买|单|办|做/.test(txt)) return 'life';
+            return 'misc';
+        },
+
+        calcRadius(text) {
+            return Math.min(25, 8 + text.length * 0.5);
+        },
+
+        // 🖌️ 绘图循环 (核心渲染)
         draw() {
             const ctx = this.ctx;
             const w = this.canvas.width;
             const h = this.canvas.height;
 
-            ctx.fillStyle = '#0a0a12';
+            ctx.fillStyle = '#050505'; // 背景色保持深沉
             ctx.fillRect(0, 0, w, h);
 
             ctx.save();
-            // 应用缩放和平移
             ctx.translate(w/2 + this.offsetX, h/2 + this.offsetY);
             ctx.scale(this.scale, this.scale);
 
-            // 1. 绘制复杂的神经网络连线
-            ctx.globalCompositeOperation = 'screen'; // 混合模式让线条叠加发光
+            // 1. 绘制连线 (更清晰的线条)
+            ctx.globalCompositeOperation = 'screen';
             this.links.forEach(link => {
                 let s = this.nodes[link.source];
                 let t = this.nodes[link.target];
@@ -1476,49 +1540,66 @@ function displayModels(models) {
                 ctx.moveTo(s.x, s.y);
                 ctx.lineTo(t.x, t.y);
 
-                // 线条颜色渐变
+                // 获取类型对应的颜色
+                const c1 = this.config.types[s.type]?.color || '#888';
+                const c2 = this.config.types[t.type]?.color || '#888';
+
                 let grad = ctx.createLinearGradient(s.x, s.y, t.x, t.y);
-                grad.addColorStop(0, s.color.base);
-                grad.addColorStop(1, t.color.base);
+                grad.addColorStop(0, c1);
+                grad.addColorStop(1, c2);
 
                 ctx.strokeStyle = grad;
-                ctx.globalAlpha = 0.15; // 半透明线条
-                ctx.lineWidth = 1.5 / this.scale;
+                ctx.globalAlpha = 0.3; // 提高不透明度，让线更清晰
+                ctx.lineWidth = 1.5 / this.scale; // 线宽随缩放调整，保持视觉一致
                 ctx.stroke();
             });
 
-            // 2. 绘制节点 (发光球体)
+            // 2. 绘制节点
             ctx.globalCompositeOperation = 'source-over';
             ctx.globalAlpha = 1;
 
             this.nodes.forEach(node => {
-                // 物理微动 (漂浮感)
-                node.x += Math.sin(Date.now()*0.001 + node.id)*0.2;
-                node.y += Math.cos(Date.now()*0.001 + node.id)*0.2;
+                // 简单的物理浮动
+                node.x += Math.sin(Date.now()*0.0005 + node.id) * 0.1;
 
-                // 绘制外发光
-                let glowR = node.r * (node === this.selectedNode ? 2.5 : 1.5);
-                let grd = ctx.createRadialGradient(node.x, node.y, node.r*0.5, node.x, node.y, glowR);
-                grd.addColorStop(0, node.color.base);
-                grd.addColorStop(1, 'transparent');
+                const conf = this.config.types[node.type] || this.config.types['misc'];
+                const color = conf.color;
 
-                ctx.fillStyle = grd;
+                // 节点主体 (实心球，不发光，追求质感)
+                ctx.fillStyle = color;
                 ctx.beginPath();
-                ctx.arc(node.x, node.y, glowR, 0, Math.PI*2);
+                ctx.arc(node.x, node.y, node.r, 0, Math.PI*2);
                 ctx.fill();
 
-                // 绘制核心实心圆
-                ctx.fillStyle = '#fff';
-                ctx.beginPath();
-                ctx.arc(node.x, node.y, node.r * 0.3, 0, Math.PI*2); // 核心小白点
-                ctx.fill();
+                // 选中态光环
+                if(node === this.selectedNode) {
+                    ctx.strokeStyle = '#fff';
+                    ctx.lineWidth = 2 / this.scale;
+                    ctx.beginPath();
+                    ctx.arc(node.x, node.y, node.r + 4/this.scale, 0, Math.PI*2);
+                    ctx.stroke();
+                }
 
-                // 文字 (仅在中观尺度或选中时显示)
-                if(this.scale > 0.6 || node === this.selectedNode) {
+                // 🔍 视距控制显示逻辑
+                // 中观：显示标签 (Scale > 0.4)
+                if(this.scale > 0.4) {
                     ctx.fillStyle = '#fff';
-                    ctx.font = `${12/this.scale}px Arial`;
+                    ctx.font = `${12/this.scale}px -apple-system`;
                     ctx.textAlign = 'center';
-                    ctx.fillText(node.text.substring(0,6) + (node.text.length>6?'...':''), node.x, node.y + node.r + 15/this.scale);
+                    ctx.textBaseline = 'middle';
+                    // 只有球够大才把字写球里，否则写下面
+                    if(node.r * this.scale > 15) {
+                        ctx.fillText(node.text.substring(0,4), node.x, node.y);
+                    } else {
+                        ctx.fillText(node.text.substring(0,6), node.x, node.y + node.r + 10/this.scale);
+                    }
+                }
+
+                // 微观：显示内容详情框 (Scale > 1.8)
+                // 这里用 Canvas 画框比较复杂，我们采用 HTML DOM 覆盖的方式在 checkHover 里处理？
+                // 或者直接在这里画文字块
+                if(this.scale > 1.8 && node.desc) {
+                    this.drawMicroView(ctx, node);
                 }
             });
 
@@ -1528,10 +1609,56 @@ function displayModels(models) {
             }
         },
 
-        // 🎮 交互事件绑定
+        // 🔬 微观视角绘制 (直接在 Canvas 上画内容)
+        drawMicroView(ctx, node) {
+            const width = 120 / this.scale; // 随缩放
+            const padding = 5 / this.scale;
+            const x = node.x + node.r + 5/this.scale;
+            const y = node.y - 10/this.scale;
+            const fontSize = 4 / this.scale; // 非常小的字，放大后才清晰
+
+            // 背景
+            ctx.fillStyle = 'rgba(30,30,35,0.8)';
+            ctx.fillRect(x, y, width, width*0.6);
+            ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+            ctx.strokeRect(x, y, width, width*0.6);
+
+            // 文字
+            ctx.fillStyle = '#eee';
+            ctx.textAlign = 'left';
+            ctx.font = `${fontSize}px sans-serif`;
+            // 简单的换行模拟
+            const lines = node.desc.substring(0, 50).match(new RegExp(`.{1,10}`, 'g')) || [];
+            lines.forEach((line, i) => {
+                ctx.fillText(line, x + padding, y + padding + (i+1)*fontSize*1.5);
+            });
+        },
+
+        // 🎮 交互事件绑定 (支持双指缩放)
         bindEvents() {
             const handler = (e) => {
                 e.preventDefault();
+
+                // 双指缩放逻辑
+                if(e.touches && e.touches.length === 2) {
+                    const dx = e.touches[0].clientX - e.touches[1].clientX;
+                    const dy = e.touches[0].clientY - e.touches[1].clientY;
+                    const dist = Math.sqrt(dx*dx + dy*dy);
+
+                    if(this.lastDist > 0) {
+                        const delta = dist - this.lastDist;
+                        const zoomSpeed = 0.005;
+                        const newScale = this.scale * (1 + delta * zoomSpeed);
+                        // 限制缩放范围
+                        this.scale = Math.min(Math.max(0.2, newScale), 3.0);
+                    }
+                    this.lastDist = dist;
+                    return;
+                } else {
+                    this.lastDist = 0; // 重置
+                }
+
+                // 单指/鼠标拖拽逻辑
                 let clientX = e.clientX || e.touches[0].clientX;
                 let clientY = e.clientY || e.touches[0].clientY;
 
@@ -1560,28 +1687,29 @@ function displayModels(models) {
             this.container.addEventListener('wheel', e => {
                 e.preventDefault();
                 this.scale += e.deltaY * -0.001;
-                this.scale = Math.min(Math.max(0.2, this.scale), 5);
+                this.scale = Math.min(Math.max(0.2, this.scale), 3.0);
             });
         },
 
         checkClick(cx, cy) {
             const rect = this.canvas.getBoundingClientRect();
-            // 坐标转换：屏幕 -> 画布中心相对 -> 缩放修正 -> 偏移修正
             const worldX = (cx - rect.left - this.canvas.width/2 - this.offsetX) / this.scale;
             const worldY = (cy - rect.top - this.canvas.height/2 - this.offsetY) / this.scale;
 
             let hit = false;
-            for(let node of this.nodes) {
-                // 宽松点击判定
-                if(Math.hypot(node.x - worldX, node.y - worldY) < node.r * 2 / this.scale + 20) {
+            // 倒序遍历，优先点击上层
+            for(let i=this.nodes.length-1; i>=0; i--) {
+                const node = this.nodes[i];
+                if(Math.hypot(node.x - worldX, node.y - worldY) < node.r + 10/this.scale) {
                     this.selectNode(node);
                     hit = true;
                     break;
                 }
             }
             if(!hit) {
-                this.selectedNode = null;
-                document.getElementById('neuro-node-info').style.display = 'none';
+                // 点击空白处不取消选中，除非专门点关闭，防止误触
+                // this.selectedNode = null;
+                // document.getElementById('neuro-node-info').style.display = 'none';
             }
         },
 
@@ -1590,84 +1718,168 @@ function displayModels(models) {
             const info = document.getElementById('neuro-node-info');
             info.style.display = 'block';
 
+            // 填充信息
+            const conf = this.config.types[node.type];
             document.getElementById('neuro-title').innerText = node.text;
-            document.getElementById('neuro-tag').innerText = node.type.toUpperCase();
-            document.getElementById('neuro-tag').style.backgroundColor = node.color.base;
+
+            const tagEl = document.getElementById('neuro-tag');
+            tagEl.innerText = conf ? conf.name : '未知';
+            tagEl.style.background = conf ? conf.color : '#ccc';
+
             document.getElementById('neuro-desc').innerText = node.desc;
 
-            // 显示AI内容状态
-            const aiBox = document.getElementById('neuro-ai-box');
-            if(node.ai) {
-                aiBox.style.display = 'block';
-                aiBox.innerText = node.ai;
-            } else {
-                aiBox.style.display = 'none';
-            }
+            // 重置按钮状态
+            document.getElementById('neuro-ai-btn').innerText = '⚡ AI 神经裂变';
+            document.getElementById('neuro-ai-btn').disabled = false;
+        },
 
-            // 自动居中视角
-            // targetX * scale + offsetX = 0  => offsetX = -targetX * scale
-            // 简单的平滑过渡效果可以后续加，这里直接跳
-            // this.offsetX = -node.x * this.scale;
-            // this.offsetY = -node.y * this.scale;
+        resetView() {
+            this.scale = 1;
+            this.offsetX = 0;
+            this.offsetY = 0;
+        },
+
+        // ⚡ 核心修复：点击后的神经裂变逻辑
+        async triggerExpand() {
+            if(!this.selectedNode) return;
+            const node = this.selectedNode;
+            const btn = document.getElementById('neuro-ai-btn');
+
+            btn.innerText = '🧠 裂变中...';
+            btn.disabled = true;
+
+            const prompt = `请基于概念"${node.text}"，联想拓展出3个相关的子概念。
+            返回格式必须为JSON数组，例如：["概念A", "概念B", "概念C"]。不要废话。`;
+
+            const res = await callAI(prompt); // 调用 Code 2 的通用AI函数
+
+            if(res) {
+                try {
+                    // 尝试解析 JSON 数组
+                    const jsonMatch = res.match(/\[.*\]/s);
+                    const newConcepts = jsonMatch ? JSON.parse(jsonMatch[0]) : [res.substring(0,10)];
+
+                    // 裂变！生成新节点
+                    const parentIdx = this.nodes.indexOf(node);
+                    newConcepts.forEach((text, i) => {
+                        // 计算新位置：在父节点周围随机扩散
+                        const angle = Math.random() * Math.PI * 2;
+                        const dist = 60 + Math.random() * 40;
+
+                        const newNode = {
+                            id: Date.now() + i, // 临时ID
+                            x: node.x + Math.cos(angle) * dist,
+                            y: node.y + Math.sin(angle) * dist,
+                            r: this.calcRadius(text),
+                            text: text,
+                            desc: `由 "${node.text}" 裂变产生`,
+                            type: this.classify(text),
+                            isTemp: true, // 标记为临时节点，不存入主库(除非用户操作)
+                            vx: 0, vy: 0
+                        };
+
+                        this.nodes.push(newNode);
+                        // 建立连接
+                        this.links.push({ source: parentIdx, target: this.nodes.length - 1 });
+                    });
+
+                    btn.innerText = `✨ 已裂变 ${newConcepts.length} 个节点`;
+
+                } catch(e) {
+                    console.error(e);
+                    btn.innerText = '⚠️ 解析失败';
+                }
+            } else {
+                btn.innerText = '⚠️ API 错误';
+            }
+            // 恢复按钮点击
+            setTimeout(() => btn.disabled = false, 2000);
+        },
+
+        // 📊 统计渲染
+        renderStats() {
+            const counts = {};
+            this.nodes.forEach(n => {
+                counts[n.type] = (counts[n.type] || 0) + 1;
+            });
+
+            const total = this.nodes.length;
+            const chart = document.getElementById('neuroPieChart');
+            const legend = document.getElementById('neuroLegendBox');
+
+            let deg = 0;
+            let gradStr = [];
+            let legHtml = '';
+
+            Object.entries(counts).forEach(([type, count]) => {
+                const conf = this.config.types[type] || {name:type, color:'#888'};
+                const endDeg = deg + (count/total)*360;
+                gradStr.push(`${conf.color} ${deg}deg ${endDeg}deg`);
+                deg = endDeg;
+
+                legHtml += `
+                    <div class="legend-item">
+                        <div class="dot" style="background:${conf.color}"></div>
+                        <span>${conf.name}: ${count} (${Math.round(count/total*100)}%)</span>
+                    </div>`;
+            });
+
+            chart.style.background = `conic-gradient(${gradStr.join(', ')})`;
+            legend.innerHTML = legHtml;
+            document.getElementById('neuroStatsList').innerText = `当前视野内共有 ${total} 个神经元节点`;
+        },
+
+        // 🏷️ 类型管理渲染
+        renderTypeMgr() {
+            const list = document.getElementById('typeMgrList');
+            list.innerHTML = '';
+
+            Object.entries(this.config.types).forEach(([key, conf]) => {
+                const el = document.createElement('div');
+                el.className = 'type-mgr-item';
+                el.innerHTML = `
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <div class="color-picker-dot" style="background:${conf.color}">
+                            <input type="color" class="color-picker-input" value="${conf.color}"
+                                onchange="Neuro.updateTypeColor('${key}', this.value)">
+                        </div>
+                        <input type="text" value="${conf.name}"
+                            style="background:transparent; border:none; color:#fff; width:80px; font-size:14px;"
+                            onchange="Neuro.updateTypeName('${key}', this.value)">
+                    </div>
+                    <span style="font-size:10px; color:#666;">${key}</span>
+                `;
+                list.appendChild(el);
+            });
+        },
+
+        updateTypeColor(key, color) {
+            this.config.types[key].color = color;
+            this.saveConfig();
+            this.renderTypeMgr(); // 刷新UI
+            // 不需要刷新画面，因为draw循环会自动读取新颜色
+        },
+
+        updateTypeName(key, name) {
+            this.config.types[key].name = name;
+            this.saveConfig();
         }
     };
 
-    // === 🔌 对外暴露的控制函数 ===
-
+    // === 对外暴露的控制函数 ===
     function toggleNeuroLayer() {
         const el = document.getElementById('neuro-layer');
         if(el.style.display === 'none') {
             el.style.display = 'flex';
-            Neuro.init(); // 每次打开都重绘并同步最新数据
+            // 只在初次或无数据时全量同步，防止覆盖裂变出的新节点
+            if(Neuro.nodes.length === 0) Neuro.syncData();
+            Neuro.resize();
             Neuro.draw();
         } else {
             el.style.display = 'none';
             cancelAnimationFrame(Neuro.rafId);
         }
     }
-
-    function closeNeuroInfo() {
-        document.getElementById('neuro-node-info').style.display = 'none';
-        Neuro.selectedNode = null;
-    }
-
-    function neuroReset() {
-        Neuro.scale = 1;
-        Neuro.offsetX = 0;
-        Neuro.offsetY = 0;
-    }
-
-    async function neuroTriggerAI() {
-        if(!Neuro.selectedNode) return;
-        const node = Neuro.selectedNode;
-        const btn = document.querySelector('#neuro-node-info button');
-
-        btn.innerText = '🧠 神经网络联通中...';
-
-        // 调用Code 2原本的 callAI 函数
-        const prompt = `请基于知识点<q>"${node.text}"</q>，进行发散性思维拓展，关联到其他领域的知识（200字以内）：`;
-        const res = await callAI(prompt);
-
-        if(res) {
-            node.ai = res;
-            // 同步回原始 DB.bubbles 数据，确保保存
-            const originalBubble = DB.bubbles.find(b => b.id === node.id);
-            if(originalBubble) {
-                originalBubble.ai = res;
-                saveAll(); // 调用 Code 2 的保存函数
-            }
-
-            document.getElementById('neuro-ai-box').innerText = res;
-            document.getElementById('neuro-ai-box').style.display = 'block';
-        }
-
-        btn.innerText = '🤖 AI 神经拓展';
-    }
-
-    // 🚀 初始化钩子：在页面加载时顺便初始化脑图对象
-    window.addEventListener('load', () => {
-        Neuro.init();
-    });
 
 // === 10. 修改callAI函数，使用配置的模型 ===
 // 原来的callAI函数已经使用DB.config.model，不需要修改
@@ -1678,6 +1890,7 @@ function getCurrentModel() {
     </script>
 </body>
 </html>
+
 
 
 
