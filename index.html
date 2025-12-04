@@ -883,16 +883,20 @@
             });
         }
 
+
+
+        // [修改] addBubble 函数
         function addBubble() {
             const input = document.getElementById('mainInput');
             const val = input.value.trim();
             if(!val) return;
 
-            // 强制添加至“今天”还是“当前视图”？逻辑：跟随当前视图
             DB.bubbles.push({
                 id: Date.now(), date: STATE.curDateStr,
-                text: val, detail: '', ai: '', color: UTILS.randColor()
+                text: val, detail: '', ai: '',
+                color: getAutoColor(val) // <--- 这里用了自动颜色！
             });
+            
             input.value = '';
             saveAll();
             renderStage();
@@ -901,6 +905,16 @@
             // 滚动
             setTimeout(() => document.querySelector('.main-stage').scrollTop = 99999, 100);
         }
+
+        // [修改] triggerDailySummary 里的整理逻辑 (如果需要整理后重置颜色)
+        // 其实整理主要是生成摘要，不建议动原有Bubble的颜色，除非您想让AI重新给Bubble上色
+        // 如果需要，可以在 json 解析后遍历 list，更新 color
+        /*
+        json.categories.forEach(c => {
+             // 这里的逻辑比较复杂，因为 AI 返回的是 summary，没法一一对应 bubble
+             // 所以维持 addBubble 时的颜色分类是最稳妥的
+        });
+        */
 
         // === 4. 详情 & AI ===
         function openBubbleDetail(id) {
@@ -1063,30 +1077,6 @@ async function triggerBubbleExpand() {
             const miscColors = ['#BF5AF2', '#FFD60A', '#FF9F0A', '#64D2FF'];
             return miscColors[Math.floor(Math.random() * miscColors.length)];
         }
-
-        // [修改] addBubble 函数
-        function addBubble() {
-            const input = document.getElementById('mainInput');
-            const val = input.value.trim();
-            if(!val) return;
-
-            DB.bubbles.push({
-                id: Date.now(), date: STATE.curDateStr,
-                text: val, detail: '', ai: '',
-                color: getAutoColor(val) // <--- 这里用了自动颜色！
-            });
-            // ... 后续代码不变 ...
-        }
-
-        // [修改] triggerDailySummary 里的整理逻辑 (如果需要整理后重置颜色)
-        // 其实整理主要是生成摘要，不建议动原有Bubble的颜色，除非您想让AI重新给Bubble上色
-        // 如果需要，可以在 json 解析后遍历 list，更新 color
-        /*
-        json.categories.forEach(c => {
-             // 这里的逻辑比较复杂，因为 AI 返回的是 summary，没法一一对应 bubble
-             // 所以维持 addBubble 时的颜色分类是最稳妥的
-        });
-        */
 
 
         function updateDockState() {
@@ -1552,6 +1542,7 @@ function getCurrentModel() {
     </script>
 </body>
 </html>
+
 
 
 
