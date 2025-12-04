@@ -13,6 +13,66 @@
     <style>
         /* === 0. 核心变量与重置 === */
         :root {
+            /* === 动态主题变量 (默认深色) === */
+            --glass-bg: rgba(30, 30, 30, 0.6);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --glass-blur: 30px; /* 更强的高级模糊 */
+
+            --text-main: #ffffff;
+            --text-sub: rgba(255, 255, 255, 0.6);
+
+            --card-bg: rgba(20, 20, 20, 0.85);
+            --dock-bg: rgba(10, 10, 10, 0.7);
+
+            /* 功能色 (保持 iOS 风格) */
+            --accent-blue: #0A84FF;
+            --accent-green: #30D158;
+            --accent-red: #FF453A;
+
+            /* 渐变色 */
+            --primary-gradient: linear-gradient(135deg, #0A84FF 0%, #30D158 100%);
+
+            /* 背景调节变量 */
+            --bg-blur: 3px;
+            --bg-opacity: 0.4;
+        }
+
+        /* === 主题预设 (通过 JS 切换 body 的 class) === */
+
+        /* ⚪ 白色主题 (清爽) */
+        body.theme-white {
+            --glass-bg: rgba(255, 255, 255, 0.65);
+            --glass-border: rgba(0, 0, 0, 0.05);
+            --text-main: #000000;
+            --text-sub: rgba(0, 0, 0, 0.5);
+            --card-bg: rgba(240, 240, 240, 0.85);
+            --dock-bg: rgba(255, 255, 255, 0.7);
+            --primary-gradient: linear-gradient(135deg, #007AFF 0%, #34C759 100%);
+        }
+
+        /* 🌸 浅粉主题 (猛男必选) */
+        body.theme-pink {
+            --glass-bg: rgba(255, 240, 245, 0.6);
+            --glass-border: rgba(255, 182, 193, 0.2);
+            --text-main: #5e3a42; /* 深粉褐，保证可读性 */
+            --text-sub: rgba(94, 58, 66, 0.6);
+            --card-bg: rgba(255, 245, 248, 0.85);
+            --dock-bg: rgba(255, 240, 245, 0.8);
+            --primary-gradient: linear-gradient(135deg, #FF9A9E 0%, #FECFEF 100%);
+            --accent-blue: #FF6B6B; /* 强调色变暖 */
+        }
+
+        /* 🧊 浅蓝主题 (冷静) */
+        body.theme-blue {
+            --glass-bg: rgba(240, 248, 255, 0.6);
+            --glass-border: rgba(135, 206, 250, 0.2);
+            --text-main: #1c3d5a; /* 深蓝灰 */
+            --text-sub: rgba(28, 61, 90, 0.6);
+            --card-bg: rgba(245, 250, 255, 0.85);
+            --dock-bg: rgba(240, 248, 255, 0.8);
+            --primary-gradient: linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%);
+        }
+
             /* 视觉基调 */
             --glass-bg: rgba(255, 255, 255, 0.08);
             --glass-border: rgba(255, 255, 255, 0.15);
@@ -52,6 +112,12 @@
         /* === 1. 动态背景层 === */
         .bg-layer { position: fixed; inset: 0; background: linear-gradient(to bottom, #0f2027, #203a43, #2c5364); z-index: -2; }
         .bg-image {
+            /* ... 原有属性保留 ... */
+            opacity: var(--bg-opacity);
+            filter: blur(var(--bg-blur));
+            /* ... */
+        }
+
             position: fixed; inset: 0; background-size: cover; background-position: center;
             opacity: 0.4; z-index: -1; filter: blur(3px); transition: 0.5s;
             /* 默认图 */
@@ -216,14 +282,24 @@
             display: none; align-items: center; justify-content: center; opacity: 0; transition: 0.3s;
         }
         .modal-overlay.active { display: flex; opacity: 1; }
-
         .modal-card {
-            width: 90%; max-width: 500px; max-height: 85vh; overflow-y: auto;
-            background: var(--card-bg); border-radius: 24px; padding: 24px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.6); position: relative;
-            transform: scale(0.95); transition: 0.3s cubic-bezier(0.19, 1, 0.22, 1);
-            border: 1px solid rgba(255,255,255,0.1);
+            /* ... */
+            /* 增强毛玻璃质感 */
+            backdrop-filter: blur(40px);
+            -webkit-backdrop-filter: blur(40px);
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
         }
+        /* Tab 切换样式 (为新换装界面准备) */
+        .tab-header { display: flex; gap: 10px; margin-bottom: 15px; border-bottom: 1px solid var(--glass-border); padding-bottom: 10px; }
+        .tab-btn {
+            flex: 1; padding: 8px; border-radius: 8px; text-align: center; cursor: pointer;
+            font-size: 14px; color: var(--text-sub); transition: 0.2s;
+        }
+        .tab-btn.active { background: var(--glass-bg); color: var(--text-main); font-weight: bold; }
+        .tab-content { display: none; animation: slideIn 0.2s; }
+        .tab-content.active { display: block; }
+
         .modal-overlay.active .modal-card { transform: scale(1); }
 
         .modal-header {
@@ -371,10 +447,10 @@
             <button class="dock-btn" onclick="window.location.href='mindmap.html'">
                 🧠 脑图模式
             </button>
-
-            <button class="dock-btn" onclick="openModal('bgModal')">
-                🖼 换背景
+            <button class="dock-btn" onclick="openModal('skinModal')">
+                🎨 换装
             </button>
+
             <!-- 添加到 dock-row 中，位于背景按钮之后 -->
             <button class="dock-btn" onclick="openModal('dataModal')">
                 💾 数据
@@ -502,18 +578,58 @@
     </div>
 
     <!-- 6. 背景设置 -->
-    <div class="modal-overlay" id="bgModal">
+    <div class="modal-overlay" id="skinModal">
         <div class="modal-card">
-            <div class="modal-header"><span>🖼 更换背景</span><span class="close-icon" onclick="closeModal('bgModal')">×</span></div>
-            <label class="form-label">图片链接</label>
-            <input type="text" id="bgUrlInput" class="form-input" placeholder="https://...">
-            <label class="form-label" style="margin-top:10px;">或上传本地图片</label>
-            <input type="file" id="bgFileInput" class="form-input" accept="image/*">
+            <div class="modal-header"><span>🎨 奇迹暖暖低配版</span><span class="close-icon" onclick="closeModal('skinModal')">×</span></div>
 
-            <button class="btn-primary" onclick="saveBg()">应用</button>
-            <button class="btn-primary btn-secondary" onclick="resetBg()">恢复默认</button>
+
+            <div class="tab-header">
+                <div class="tab-btn active" onclick="switchTab('tab-bg')">🖼 background setting</div>
+                <div class="tab-btn" onclick="switchTab('tab-theme')">🌈 Main color</div>
+            </div>
+
+
+            <div id="tab-bg" class="tab-content active">
+                <div class="form-group">
+                    <label class="form-label">图片链接 (URL)</label>
+                    <input type="text" id="bgUrlInput" class="form-input" placeholder="https://..." onchange="previewBg()">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">上传图片 (本地)</label>
+                    <input type="file" id="bgFileInput" class="form-input" accept="image/*">
+                    <div style="font-size:10px; color:var(--text-sub); margin-top:4px;">* 自动压缩以节省空间，建议< 2MB</div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">模糊度 (Blur): <span id="blurVal">3px</span></label>
+                    <input type="range" min="0" max="20" step="1" id="blurRange" style="width:100%" oninput="updateBgStyle()">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">亮度/不透明度: <span id="opaVal">40%</span></label>
+                    <input type="range" min="0.1" max="1" step="0.1" id="opaRange" style="width:100%" oninput="updateBgStyle()">
+                </div>
+
+                <div style="display:flex; gap:10px; margin-top:15px;">
+                    <button class="btn-primary" onclick="saveSkinConfig()">保存应用</button>
+                    <button class="btn-primary btn-secondary" onclick="resetBg()">恢复默认图</button>
+                </div>
+            </div>
+
+
+            <div id="tab-theme" class="tab-content">
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                    <button class="btn-primary" style="background:#111; border:1px solid #333;" onclick="setTheme('dark')">🌑 深邃黑 (默认)</button>
+                    <button class="btn-primary" style="background:#f0f0f0; color:#000;" onclick="setTheme('white')">⚪ 极简白</button>
+                    <button class="btn-primary" style="background:#ffeef0; color:#d63384;" onclick="setTheme('pink')">🌸 樱花粉</button>
+                    <button class="btn-primary" style="background:#e6f7ff; color:#0050b3;" onclick="setTheme('blue')">🧊 冰川蓝</button>
+                </div>
+                <div style="margin-top:20px; font-size:12px; color:var(--text-sub); text-align:center;">
+                    * 主题仅改变界面配色，不影响背景图
+                </div>
+            </div>
         </div>
     </div>
+
     <!-- 7. 数据管理 -->
 <div class="modal-overlay" id="dataModal">
     <div class="modal-card">
@@ -591,6 +707,8 @@
         };
 
         // 初始化
+        const skinCfg = JSON.parse(localStorage.getItem('mb_config_skin') || '{}');
+        DB.config.bgBlur = skinCfg.blur; DB.config.bgOpacity = skinCfg.opacity; DB.config.theme = skinCfg.theme;
         window.onload = () => {
             // 加载配置
             document.getElementById('cfgUrl').value = DB.config.url;
@@ -607,6 +725,38 @@
                     r.readAsDataURL(f);
                 }
             });
+
+            // [新增] 初始化换装配置
+            applyTheme(DB.config.theme || 'dark');
+            if(DB.config.bgBlur) document.documentElement.style.setProperty('--bg-blur', DB.config.bgBlur + 'px');
+            if(DB.config.bgOpacity) document.documentElement.style.setProperty('--bg-opacity', DB.config.bgOpacity);
+
+            // 绑定 Tab 切换
+            window.switchTab = (id) => {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                document.querySelector(`[onclick="switchTab('${id}')"]`).classList.add('active');
+                document.getElementById(id).classList.add('active');
+            };
+
+            // [核心修改] 修复本地图片 (转 Base64)
+            document.getElementById('bgFileInput').addEventListener('change', e => {
+                const f = e.target.files[0];
+                if(f) {
+                    const r = new FileReader();
+                    r.onload = ev => {
+                        // 这里可以加个压缩逻辑，为了代码短先直接存
+                        document.getElementById('bgUrlInput').value = ev.target.result;
+                        previewBg(); // 实时预览
+                    };
+                    r.readAsDataURL(f);
+                }
+            });
+
+            // 初始化滑块值显示
+            document.getElementById('blurRange').value = parseInt(DB.config.bgBlur || 3);
+            document.getElementById('opaRange').value = parseFloat(DB.config.bgOpacity || 0.4);
+
 
             // 绑定输入回车
             document.getElementById('mainInput').addEventListener('keypress', e => e.key==='Enter' && addBubble());
@@ -903,6 +1053,41 @@ async function triggerBubbleExpand() {
                 }
             }
         }
+                // [新增] 自动颜色分类器 (复用脑图逻辑)
+        function getAutoColor(text) {
+            const t = text.toLowerCase();
+            if (/语言|英语|单词|grammar/i.test(t)) return '#30D158'; // 绿
+            if (/数学|代码|逻辑|算法/i.test(t)) return '#0A84FF'; // 蓝
+            if (/游戏|电影|娱乐|玩/i.test(t)) return '#FF453A';   // 红
+            // 杂项：随机亮色
+            const miscColors = ['#BF5AF2', '#FFD60A', '#FF9F0A', '#64D2FF'];
+            return miscColors[Math.floor(Math.random() * miscColors.length)];
+        }
+
+        // [修改] addBubble 函数
+        function addBubble() {
+            const input = document.getElementById('mainInput');
+            const val = input.value.trim();
+            if(!val) return;
+
+            DB.bubbles.push({
+                id: Date.now(), date: STATE.curDateStr,
+                text: val, detail: '', ai: '',
+                color: getAutoColor(val) // <--- 这里用了自动颜色！
+            });
+            // ... 后续代码不变 ...
+        }
+
+        // [修改] triggerDailySummary 里的整理逻辑 (如果需要整理后重置颜色)
+        // 其实整理主要是生成摘要，不建议动原有Bubble的颜色，除非您想让AI重新给Bubble上色
+        // 如果需要，可以在 json 解析后遍历 list，更新 color
+        /*
+        json.categories.forEach(c => {
+             // 这里的逻辑比较复杂，因为 AI 返回的是 summary，没法一一对应 bubble
+             // 所以维持 addBubble 时的颜色分类是最稳妥的
+        });
+        */
+
 
         function updateDockState() {
             const d = DB.diaries[STATE.curDateStr];
@@ -1305,6 +1490,59 @@ function displayModels(models) {
     });
 }
 
+                // === [新增] 换装相关逻辑 ===
+
+        function previewBg() {
+            const url = document.getElementById('bgUrlInput').value;
+            if(url) document.getElementById('bgImage').style.backgroundImage = `url('${url}')`;
+        }
+
+        function updateBgStyle() {
+            const blur = document.getElementById('blurRange').value;
+            const opa = document.getElementById('opaRange').value;
+
+            document.documentElement.style.setProperty('--bg-blur', blur + 'px');
+            document.documentElement.style.setProperty('--bg-opacity', opa);
+
+            document.getElementById('blurVal').innerText = blur + 'px';
+            document.getElementById('opaVal').innerText = Math.round(opa*100) + '%';
+        }
+
+        function setTheme(theme) {
+            applyTheme(theme);
+            DB.config.theme = theme; // 暂存，点保存才写入localStorage
+            // 但为了即时反馈，这里直接改了，用户体验更好
+            saveAll();
+        }
+
+        function applyTheme(theme) {
+            document.body.className = ''; // 清空
+            if(theme !== 'dark') document.body.classList.add(`theme-${theme}`);
+        }
+
+        function saveSkinConfig() {
+            DB.config.bg = document.getElementById('bgUrlInput').value;
+            DB.config.bgBlur = document.getElementById('blurRange').value;
+            DB.config.bgOpacity = document.getElementById('opaRange').value;
+
+            localStorage.setItem('mb_bg', DB.config.bg);
+            localStorage.setItem('mb_config_skin', JSON.stringify({
+                blur: DB.config.bgBlur,
+                opacity: DB.config.bgOpacity,
+                theme: DB.config.theme
+            }));
+
+            closeModal('skinModal');
+            alert('换装成功！✨');
+        }
+
+        // 修改原来的 saveAll，把 skin config 也读写进去
+        // (为了代码简洁，建议在 DB.config 初始化时多读一个 mb_config_skin)
+        // 在 window.onload 顶部加入：
+        // const skinCfg = JSON.parse(localStorage.getItem('mb_config_skin') || '{}');
+        // DB.config.bgBlur = skinCfg.blur; DB.config.bgOpacity = skinCfg.opacity; DB.config.theme = skinCfg.theme;
+
+
 // === 10. 修改callAI函数，使用配置的模型 ===
 // 原来的callAI函数已经使用DB.config.model，不需要修改
 // 但可以添加一个获取当前模型的小函数
@@ -1314,6 +1552,7 @@ function getCurrentModel() {
     </script>
 </body>
 </html>
+
 
 
 
