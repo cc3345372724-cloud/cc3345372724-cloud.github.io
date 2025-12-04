@@ -687,6 +687,21 @@ async function triggerSplit() {
 
             nodes.push(child);
             links.push({source: selectedNode, target: child});
+                    // ... (在 newNodesData.forEach 循环结束后) ...
+
+        // [新增] 将新裂变的节点同步到主 App (作为今天的新气泡)
+        newNodesData.forEach((item, i) => {
+            // 注意：这里我们需要构造一个符合主 App 格式的对象
+            // 假设 links 里的 target 就是刚刚 push 进去的 child
+            // 简单点，直接用刚刚生成的 child 对象
+            const childNode = nodes[nodes.length - newNodesData.length + i];
+
+            syncToMainApp('add', childNode);
+        });
+
+        saveAllData(); // 本地保存
+        alert(`成功分裂出 ${newNodesData.length} 个新想法，并已同步至今日列表！`);
+
 
             // 动画弹射
             setTimeout(() => {
@@ -707,15 +722,58 @@ async function triggerSplit() {
         btn.disabled = false;
     }
 }
+// === [核心修改] 真·AI 拓展 (同步主App) ===
+async function triggerAIExpand() {
+    if(!selectedNode) return;
+    const btn = document.querySelector('.btn-ai');
+    const oldTxt = btn.innerText;
 
+    // 1. 检查配置
+    if (!apiConfig.key) return alert("请先去设置里填 API Key！");
 
-        function triggerAIExpand() {
-            if(!selectedNode) return;
-            const box = document.getElementById('aiResultBox');
-            box.style.display = 'block';
-            box.innerText = "🧠 正在连接 NeuroLink AI 矩阵...\n(模拟数据: 该节点关联了深度学习与认知科学...)";
-            selectedNode.ai = box.innerText;
-        }
+    btn.innerText = "🧠 思考中...";
+    btn.disabled = true;
+
+    // 2. 准备 Prompt
+    const prompt = `请对概念"${selectedNode.label}"进行深度百科式拓展(100-300字)，直接输出内容，不要废话。`;
+
+    try {
+        // 3. 调用 API (复用之前的 fetch 逻辑，这里简化写)
+        const response = await fetch(`${apiConfig.url}/chat/completions`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiConfig.key}` },
+            body: JSON.stringify({
+                model: apiConfig.model,
+                messages: [{role: "user", content: prompt}],
+                temperature: 0.7
+            })
+        });
+        const data = await response.json();
+        const content = data.choices[0].message.content;
+
+        // 4. 更新当前节点
+        selectedNode.ai = content;
+        // 同时把 AI 内容追加到 fullText (根据您的需求，两边互通)
+        // selectedNode.fullText += `\n\n[AI]: ${content}`;
+
+        // 5. 更新 UI
+        document.getElementById('aiResultBox').style.display = 'block';
+        document.getElementById('aiResultBox').innerText = content;
+        // document.getElementById('nodeDesc').innerText = selectedNode.fullText;
+
+        // 6. [关键] 同步回主 App 数据 (mb_bubbles)
+        syncToMainApp('update', selectedNode);
+
+        alert("AI 拓展已完成，并同步至主大脑！");
+
+    } catch(e) {
+        alert("AI 罢工了：" + e.message);
+    } finally {
+        btn.innerText = oldTxt;
+        btn.disabled = false;
+    }
+}
+
 
         function filterNodes(type, el) {
             filterType = type;
@@ -742,17 +800,22 @@ async function triggerSplit() {
         // === [新增] 辅助功能函数库 ===
 
 // 1. 删除节点
+        // === [修改] 删除节点 (双向) ===
 function deleteCurrentNode() {
     if(!selectedNode) return;
-    if(confirm(`确定要删除节点 "${selectedNode.label}" 吗？此操作不可恢复。`)) {
-        // 从数组中移除
+    if(confirm(`确定要彻底删除 "${selectedNode.label}" 吗？\n(主 App 里的对应记录也会消失！)`)) {
+        // 1. 同步删除主 App 数据
+        syncToMainApp('delete', selectedNode);
+
+        // 2. 本地删除
         nodes = nodes.filter(n => n !== selectedNode);
         links = links.filter(l => l.source !== selectedNode && l.target !== selectedNode);
 
         closeNodePanel();
-        saveAllData(); // 保存更改
+        saveAllData();
     }
 }
+
 
 // 2. 全局保存 (写入 localStorage)
 function saveAllData() {
@@ -931,6 +994,33 @@ async function fetchModels() {
         }
 
 
+// === [新增] 双向同步核心函数 ===
+function syncToMainApp(action, node) {
+    const raw = localStorage.getItem('mb_bubbles');
+    let bubbles = raw ? JSON.parse(raw) : [];
+    const todayStr = new Date().toISOString().split('T')[0]; // 获取今天日期
+
+    if (action === 'update') {
+        const target = bubbles.find(b => b.id === node.id);
+        if (target) {
+            target.ai = node.ai; // 同步 AI 内容
+            // target.detail = node.fullText; // 如果需要同步正文
+        }
+    } else if (action === 'delete') {
+        bubbles = bubbles.filter(b => b.id !== node.id);
+    } else if (action === 'add') {
+        bubbles.push({
+            id: node.id,
+            date: todayStr, // 裂变的新想法归为今天
+            text: node.fullText || node.label, // 主App主要看text
+            detail: '',
+            ai: '',
+            color: node.color
+        });
+    }
+
+    localStorage.setItem('mb_bubbles', JSON.stringify(bubbles));
+}
 
         function goBack() { window.location.href = 'index.html'; }
 
@@ -938,5 +1028,6 @@ async function fetchModels() {
     </script>
 </body>
 </html>
+
 
 
