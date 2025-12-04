@@ -582,35 +582,14 @@ let apiConfig = {
             selectedNode.fullText = document.getElementById('nodeDesc').innerText;
         }
 
-    function cycleNodeType() {
-        if(!selectedNode) return;
-        let idx = CONFIG.types.findIndex(t => t.id === selectedNode.type);
-        idx = (idx + 1) % CONFIG.types.length;
-        const newType = CONFIG.types[idx];
-
-        // 更新内存
-        selectedNode.type = newType.id;
-        selectedNode.color = newType.color;
-        updateTagUI(selectedNode);
-
-        // [新增修复]：立刻同步到主 App 和本地存储
-        // 因为 syncToMainApp 本来就支持 update 颜色
-        syncToMainApp('update', selectedNode);
-        saveAllData();
-    }
-
-    // 修改 syncToMainApp 以支持颜色更新 (原代码已有，确认一下)
-    function syncToMainApp(action, node) {
-        // ...
-        if (action === 'update') {
-            const target = bubbles.find(b => b.id === node.id);
-            if (target) {
-                target.ai = node.ai;
-                target.detail = node.fullText;
-                target.color = node.color; // [确认] 这里会更新颜色
-                // [新增] 如果修改了 type，可能也需要记录？
-                // 如果主 App 不存 type 字段，那就只能靠 color 区分
-            }
+        function cycleNodeType() {
+            if(!selectedNode) return;
+            let idx = CONFIG.types.findIndex(t => t.id === selectedNode.type);
+            idx = (idx + 1) % CONFIG.types.length;
+            const newType = CONFIG.types[idx];
+            selectedNode.type = newType.id;
+            selectedNode.color = newType.color;
+            updateTagUI(selectedNode);
         }
 
         function updateTagUI(node) {
@@ -696,51 +675,52 @@ async function triggerSplit() {
         const newNodesData = JSON.parse(cleanJson);
 
         // 6. 生成新节点
+        newNodesData.forEach((item, i) => {
+            const angle = (Math.PI * 2 / newNodesData.length) * i + Math.random();
+            const dist = 80 + Math.random() * 40;
 
-            newNodesData.forEach((item, i) => {
-                const angle = (Math.PI * 2 / newNodesData.length) * i + Math.random();
-                const dist = 80 + Math.random() * 40;
+            const child = {
+                id: Date.now() + i,
+                x: selectedNode.x, y: selectedNode.y, // 初始位置
+                r: 15 + Math.min(item.fullText.length, 5),
+                color: selectedNode.color, // 继承父节点颜色
+                label: item.label,
+                fullText: item.fullText,
+                desc: 'AI Generated',
+                type: selectedNode.type,
+                ai: '', vx: 0, vy: 0
+            };
 
-                const child = {
-                    id: Date.now() + i, // 确保 ID 唯一性
-                    x: selectedNode.x,
-                    y: selectedNode.y,
-                    r: 15 + Math.min(item.fullText.length, 5),
-                    color: selectedNode.color,
-                    label: item.label,
-                    // [新增] 确保 detail 内容也被存入 fullText
-                    fullText: item.fullText || item.label,
-                    desc: 'AI Generated',
-                    type: selectedNode.type,
-                    ai: '', vx: 0, vy: 0,
-                    source: 'ai_split' // 标记一下
-                };
+            nodes.push(child);
+            links.push({source: selectedNode, target: child});
+                    // ... (在 newNodesData.forEach 循环结束后) ...
 
-                nodes.push(child);
-                links.push({source: selectedNode, target: child});
+        // [新增] 将新裂变的节点同步到主 App (作为今天的新气泡)
+        newNodesData.forEach((item, i) => {
+            // 注意：这里我们需要构造一个符合主 App 格式的对象
+            // 假设 links 里的 target 就是刚刚 push 进去的 child
+            // 简单点，直接用刚刚生成的 child 对象
+            const childNode = nodes[nodes.length - newNodesData.length + i];
 
-                // 仅在这里添加到暂存数组，稍后统一同步或就在这里同步
-                newChildNodes.push(child);
+            syncToMainApp('add', childNode);
+        });
 
-                // 动画弹射
-                setTimeout(() => {
-                    child.x += Math.cos(angle) * dist;
-                    child.y += Math.sin(angle) * dist;
-                }, 50);
-            });
+        saveAllData(); // 本地保存
+        alert(`成功分裂出 ${newNodesData.length} 个新想法，并已同步至今日列表！`);
 
-            // [修复核心]：不要在上面的 foreach 外面再来一个 newNodesData.forEach
-            // 原代码里似乎有两段 forEach 处理 newNodesData，导致重复。
-            // 直接在这里同步到主 App
-            newChildNodes.forEach(node => {
-                syncToMainApp('add', node);
-            });
 
-            // 保存
-            saveAllData();
-            alert(`成功分裂出 ${newNodesData.length} 个新想法！`);
+            // 动画弹射
+            setTimeout(() => {
+                child.x += Math.cos(angle) * dist;
+                child.y += Math.sin(angle) * dist;
+            }, 50);
+        });
 
-        } catch (e) {
+        // 7. 保存数据！(持久化)
+        saveAllData();
+        alert(`成功分裂出 ${newNodesData.length} 个新想法！`);
+
+    } catch (e) {
         console.error(e);
         alert("分裂失败：请检查网络或API配置。\n" + e.message);
     } finally {
@@ -1060,8 +1040,6 @@ function syncToMainApp(action, node) {
     </script>
 </body>
 </html>
-
-
 
 
 
