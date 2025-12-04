@@ -778,24 +778,50 @@
             closeModal('bubbleModal');
         }
 
-        async function triggerBubbleExpand() {
-            const b = DB.bubbles.find(i => i.id === STATE.curBubbleId);
-            const box = document.getElementById('bubbleAiResult');
-            box.style.display = 'block';
-            box.innerHTML = '<span class="loading-spin">⏳</span> 思考中...';
+        // === [核心修改] 后台静默 AI 拓展 ===
+async function triggerBubbleExpand() {
+    const b = DB.bubbles.find(i => i.id === STATE.curBubbleId);
+    if (!b) return;
 
-            const prompt = `你是一个学识渊博且坚决抵制学术造假的智能知识库，请对该想法/知识点进行深度拓展、发散思维或补充背景(500-2000字)（禁止输出前言，直接输出相关知识点或者拓展，直入正题，绝对保证知识的最新和最正确）：\n${b.detail || b.text}`;
-            const res = await callAI(prompt);
+    // 1. UI 反馈：按钮变身，但不阻塞关闭
+    const btn = document.querySelector('#bubbleModal .btn-secondary'); // 那个 AI 按钮
+    const oldText = btn.innerText;
+    btn.innerText = "⏳ 查找宇宙图书馆中...";
+    btn.disabled = true;
 
-            if(res) {
-                b.ai = res;
-                box.innerText = res;
-                saveAll();
-                renderStage(); // 更新绿点
-            } else {
-                box.innerText = 'API 调用失败';
+    // 2. 构造 Prompt
+    const prompt = `你是一个能保证知识准确的智能知识库。请对"${b.text}"进行深度拓展(直接输出内容，不要前言，字数300-2000字)：\n${b.detail || ''}`;
+
+    // 3. 异步执行 (不 await，让它自己跑)
+    callAI(prompt).then(res => {
+        if (res) {
+            // 4. 写入数据 (直接追加到 detail，即可编辑区域)
+            // 如果原来有内容，换行追加；如果没有，直接填
+            const appendText = `\n\n[🤖 AI拓展]:\n${res}`;
+            b.detail = (b.detail || '') + appendText;
+
+            // 5. 如果当前弹窗还开着，实时更新 UI
+            if (STATE.curBubbleId === b.id && document.getElementById('bubbleModal').classList.contains('active')) {
+                document.getElementById('bubbleDetail').value = b.detail;
             }
+
+            // 6. 保存
+            saveAll();
+            renderStage(); // 更新界面上的小绿点
+
+            // 7. 恢复按钮 (如果弹窗还在)
+            if(btn) {
+                btn.innerText = "✅ 已追加到内容";
+                setTimeout(() => { btn.innerText = oldText; btn.disabled = false; }, 2000);
+            }
+        } else {
+            if(btn) { btn.innerText = "❌ 失败"; btn.disabled = false; }
         }
+    });
+
+    // 这里的函数直接结束，用户可以点 X 关闭弹窗，后台 callAI 还在跑
+}
+
 
         // === 5. 日记 & 整理 ===
         function openDiaryModal() {
@@ -843,7 +869,7 @@
 
             const btn = document.querySelector('.dock-btn.highlight');
             const oldTxt = btn.innerText;
-            btn.innerText = '⏳ 查找宇宙知识库...';
+            btn.innerText = '⏳ 你的bubble被扔进了宇宙...';
 
             const txt = list.map(b => `- ${b.text}`).join('\n');
             const prompt = `
@@ -1026,8 +1052,8 @@
                 const data = await res.json();
                 return data.choices[0].message.content;
             } catch(e) {
-                console.error(e);
-                alert('API Error');
+                console.error("AI后台静默失败:", e); // 改成 console.error
+                //alert('API Error');
                 return null;
             }
         }
@@ -1288,6 +1314,7 @@ function getCurrentModel() {
     </script>
 </body>
 </html>
+
 
 
 
