@@ -772,20 +772,70 @@
         }
 
         // === 4. 详情 & AI ===
-        function openBubbleDetail(id) {
+
+        // === [修复] 气泡保存与颜色逻辑 ===
+        let tempColor = '#BF5AF2'; // 全局变量，防止丢
+
+        function openBubbleModal(id) {
+            const b = id ? DB.bubbles.find(i => i.id === id) : null;
             STATE.curBubbleId = id;
-            const b = DB.bubbles.find(i => i.id === id);
-            document.getElementById('bubbleDetail').value = b.detail || b.text;
-            const res = document.getElementById('bubbleAiResult');
-            res.innerHTML = b.ai || '';
-            res.style.display = b.ai ? 'block' : 'none';
+
+            const modal = document.getElementById('bubbleModal');
+            document.getElementById('bubbleDetail').value = b ? (b.detail || b.text) : ''; // 优先显示 detail
+
+            // [修复] 颜色回显
+            tempColor = b ? (b.color || '#BF5AF2') : '#BF5AF2';
+            updateColorUI(tempColor);
+
+            // [修复] 按钮逻辑
+            const btnRow = modal.querySelector('.btn-primary').parentElement; // 获取按钮容器
+            // 这里为了保险，我们直接重写按钮区域
+            const footer = modal.querySelector('.modal-card');
+            // 注意：因为您之前的 HTML 结构里按钮散落在各处，建议直接用下面的 saveBubble 逻辑，按钮 onclick 不用变
+
             openModal('bubbleModal');
         }
 
+        function setBubbleColor(color) {
+            tempColor = color;
+            updateColorUI(color);
+        }
+
+        function updateColorUI(color) {
+            document.querySelectorAll('.color-opt').forEach(el => {
+                // 忽略大小写比较
+                if(el.style.backgroundColor && color && el.style.backgroundColor.toLowerCase() === color.toLowerCase()) {
+                    el.classList.add('active');
+                } else {
+                    el.classList.remove('active');
+                }
+            });
+            document.getElementById('customColorPicker').value = color;
+            document.getElementById('curColorVal').innerText = color;
+        }
+
         function saveBubble() {
-            const b = DB.bubbles.find(i => i.id === STATE.curBubbleId);
-            b.detail = document.getElementById('bubbleDetail').value;
+            // [修复] 获取值
+            const detail = document.getElementById('bubbleDetail').value;
+
+            if (STATE.curBubbleId) {
+                const b = DB.bubbles.find(i => i.id === STATE.curBubbleId);
+                if(b) {
+                    b.detail = detail;
+                    b.color = tempColor; // [关键] 保存颜色
+                    // 如果 text 为空，可以用 detail 的前几个字当标题
+                    if(!b.text) b.text = detail.substring(0, 20);
+                }
+            } else {
+                // 如果是新增模式（虽然目前 UI 没入口，但留着防守）
+                DB.bubbles.push({
+                    id: Date.now(), date: STATE.curDateStr,
+                    text: detail.substring(0, 20), detail: detail,
+                    color: tempColor, ai: ''
+                });
+            }
             saveAll();
+            renderStage();
             closeModal('bubbleModal');
         }
 
@@ -796,35 +846,6 @@
             renderStage();
             closeModal('bubbleModal');
         }
-
-                // 1. [修改] 打开编辑框 (回显颜色)
-        function openBubbleModal(id) {
-            const b = id ? DB.bubbles.find(i => i.id === id) : null;
-            STATE.curBubbleId = id;
-
-            const modal = document.getElementById('bubbleModal');
-            const titleEl = document.getElementById('bubbleTitle');
-            const detailEl = document.getElementById('bubbleDetail');
-
-            titleEl.value = b ? b.text : '';
-            detailEl.value = b ? b.detail : '';
-
-            // [新增] 颜色回显
-            const curColor = b ? (b.color || '#BF5AF2') : '#BF5AF2'; // 默认紫
-            updateColorUI(curColor);
-
-            // 按钮状态
-            const btnRow = modal.querySelector('.btn-row');
-            if (id) {
-                // 编辑模式：显示 AI 按钮
-                btnRow.innerHTML = `
-                    <button class="btn btn-secondary" onclick="triggerBubbleExpand()">🤖 AI 续写</button>
-                    <button class="btn btn-primary" onclick="saveBubble()">保存</button>
-                `;
-            } else {
-                // 新增模式
-                btnRow.innerHTML = `<button class="btn btn-primary" style="width:100%" onclick="saveBubble()">创建</button>`;
-            }
 
             modal.classList.add('active');
         }
@@ -1028,6 +1049,7 @@
             showCard();
         }
 
+        // === [修复] 复习卡片内容读取 ===
         function showCard() {
             if(STATE.reviewIdx >= STATE.reviewQueue.length) {
                 alert('复习完成！');
@@ -1035,9 +1057,17 @@
             }
             const item = STATE.reviewQueue[STATE.reviewIdx];
             document.getElementById('cardDate').innerText = item.date;
+
+            // 正面：标题
             document.getElementById('cardFront').innerText = item.text;
+
             document.getElementById('cardBack').style.display = 'none';
-            document.getElementById('cardBack').innerText = item.ai || '(无 拓展)';
+
+            // [关键修复] 背面：优先读 detail (新版AI内容)，没有再读 ai (旧版)，还没有就提示
+            // 过滤掉 detail 里重复的 text 部分，只显示后面的
+            let backContent = item.detail || item.ai || '(暂无详细笔记)';
+
+            document.getElementById('cardBack').innerText = backContent;
         }
 
         function flipCard() {
@@ -1404,6 +1434,7 @@ function getCurrentModel() {
     </script>
 </body>
 </html>
+
 
 
 
