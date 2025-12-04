@@ -2,14 +2,17 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>NeuroLink OS - Mind Map Ultimate</title>
-    <!-- 全屏模式适配 -->
+
+    <!-- === 0. 全屏模式适配 (iOS WebClip) === -->
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <!-- 设置状态栏样式为黑色（可选：default/black/black-translucent） -->
-    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <!-- 设置状态栏样式为黑色透明 (让内容顶上去) -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#050508">
+
     <style>
-        /* === 0. 核心变量 (视觉基调) === */
+        /* === 1. 核心变量 (视觉基调) === */
         :root {
             --glass-bg: rgba(20, 20, 30, 0.85);
             --glass-border: rgba(255, 255, 255, 0.1);
@@ -21,7 +24,7 @@
             --bg-deep: #050508;
         }
 
-        /* === 1. 核心样式重置 === */
+        /* === 2. 核心样式重置 === */
         * { margin: 0; padding: 0; box-sizing: border-box; touch-action: none; -webkit-tap-highlight-color: transparent; }
         body {
             background-color: var(--bg-deep);
@@ -33,7 +36,7 @@
             flex-direction: column;
         }
 
-        /* === 2. 画布容器 === */
+        /* === 3. 画布容器 === */
         #canvas-container {
             flex: 1;
             position: relative;
@@ -43,7 +46,7 @@
         }
         canvas { display: block; }
 
-        /* === 3. UI 层 (悬浮在画布之上) === */
+        /* === 4. UI 层 (悬浮在画布之上) === */
         .ui-layer {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -57,6 +60,7 @@
         .top-bar {
             display: flex; justify-content: space-between; align-items: flex-start;
             pointer-events: auto;
+            /* 适配刘海屏 */
             padding-top: env(safe-area-inset-top);
         }
 
@@ -83,9 +87,18 @@
             display: none; pointer-events: auto; min-width: 150px;
         }
         .type-item {
-            display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 12px;
+            display: flex; align-items: center; justify-content: space-between; /* 两端对齐 */
+            gap: 8px; margin-bottom: 8px; font-size: 12px;
         }
+        .type-info { display: flex; align-items: center; gap: 8px; }
         .color-dot { width: 12px; height: 12px; border-radius: 50%; border: 1px solid #fff; }
+
+        .del-type-btn {
+            color: #ff453a; font-weight: bold; cursor: pointer; padding: 0 5px;
+            opacity: 0.5; transition: 0.2s;
+        }
+        .del-type-btn:hover { opacity: 1; transform: scale(1.2); }
+
         .add-type-btn {
             width: 100%; border: 1px dashed #555; background: none; color: #888;
             padding: 5px; border-radius: 5px; cursor: pointer; font-size: 10px; margin-top: 5px;
@@ -98,7 +111,7 @@
             padding-bottom: max(10px, env(safe-area-inset-bottom));
         }
 
-        /* 筛选栏 (来自代码3) */
+        /* 筛选栏 */
         .filter-dock {
             background: rgba(10, 10, 15, 0.8); backdrop-filter: blur(15px);
             border-radius: 20px; padding: 10px 20px;
@@ -121,12 +134,25 @@
             backdrop-filter: blur(10px);
             display: none; margin-bottom: 10px;
             transform: translateY(20px); opacity: 0; transition: all 0.3s;
+            z-index: 20;
         }
         .node-info.show { transform: translateY(0); opacity: 1; display: block; }
 
-        .node-title { font-size: 18px; font-weight: bold; margin-bottom: 8px; color: #fff; display: flex; justify-content: space-between; }
-        .node-tag { font-size: 10px; padding: 2px 6px; border-radius: 4px; border: 1px solid #fff; align-self: center; }
+        .node-title { font-size: 18px; font-weight: bold; margin-bottom: 8px; color: #fff; display: flex; justify-content: space-between; align-items: center; }
+
+        .node-tag {
+            font-size: 10px; padding: 2px 6px; border-radius: 4px; border: 1px solid #fff;
+            align-self: center; cursor: pointer; user-select: none;
+        }
+
         .node-desc { font-size: 13px; color: #aaa; margin-bottom: 15px; line-height: 1.5; max-height: 100px; overflow-y: auto; }
+
+        /* 编辑状态样式 */
+        .editable {
+            border-bottom: 1px dashed rgba(255,255,255,0.3);
+            transition: 0.2s; outline: none;
+        }
+        .editable:focus { border-bottom: 1px solid #00ffcc; background: rgba(255,255,255,0.05); }
 
         /* AI 结果框 */
         .ai-box {
@@ -174,7 +200,7 @@
                         <!-- JS 动态生成 -->
                         <button class="add-type-btn" onclick="addNewType()">+ 新增类目</button>
                     </div>
-                    <div style="font-size: 10px; color: #555; text-align: right;">NeuroLink Ultimate</div>
+                    <div style="font-size: 10px; color: #555; text-align: right;">NeuroLink v3.1</div>
                 </div>
             </div>
 
@@ -185,16 +211,20 @@
                 <!-- 节点详情 (弹窗) -->
                 <div class="node-info" id="nodeInfoPanel">
                     <div class="node-title">
-                        <span id="nodeTitle">节点名称</span>
-                        <span id="nodeTag" class="node-tag">TAG</span>
+                        <!-- 标题可编辑 -->
+                        <span id="nodeTitle" class="editable" contenteditable="true" onblur="saveNodeData()">节点名称</span>
+                        <!-- 点击切换TAG -->
+                        <span id="nodeTag" class="node-tag" onclick="cycleNodeType()">TAG</span>
                     </div>
-                    <div class="node-desc" id="nodeDesc">内容...</div>
+                    <!-- 描述可编辑 -->
+                    <div class="node-desc editable" id="nodeDesc" contenteditable="true" onblur="saveNodeData()">内容...</div>
                     <div class="ai-box" id="aiResultBox"></div>
 
                     <div class="btn-group">
                         <button class="action-btn btn-split" onclick="triggerSplit()">⚡ 分裂</button>
                         <button class="action-btn btn-ai" onclick="triggerAIExpand()">🤖 AI 拓展</button>
-                        <button class="action-btn btn-close" onclick="deselectNode()">×</button>
+                        <!-- 专门的关闭按钮 -->
+                        <button class="action-btn btn-close" onclick="closeNodePanel()">×</button>
                     </div>
                 </div>
 
@@ -272,12 +302,12 @@
             if (rawData) {
                 const bubbles = JSON.parse(rawData);
                 nodes = bubbles.map(b => {
-                    const type = detectType(b.text); // 自动修复颜色Bug：重新检测类型
+                    const type = detectType(b.text);
                     return {
                         id: b.id,
                         x: (Math.random() - 0.5) * 800,
                         y: (Math.random() - 0.5) * 800,
-                        r: 10 + Math.min(b.text.length, 10), // 半径随字数增加
+                        r: 10 + Math.min(b.text.length, 10),
                         color: CONFIG.colors[type],
                         label: b.text.substring(0, 8) + (b.text.length>8?'...':''),
                         fullText: b.text,
@@ -293,7 +323,6 @@
             rebuildLinks();
         }
 
-        // 核心修复：更强大的类型检测逻辑
         function detectType(text) {
             const t = text.toLowerCase();
             if (/语言|英语|日文|单词|语法|speak/i.test(t)) return 'language';
@@ -343,12 +372,11 @@
             // 筛选逻辑：只渲染符合类型的节点
             const visibleNodes = nodes.filter(n => filterType === 'all' || n.type === filterType);
 
-            // 绘制连线 (Screen混合模式 + 渐变)
+            // 绘制连线
             ctx.globalCompositeOperation = 'screen';
             ctx.lineWidth = 1.5 / scale;
             links.forEach(link => {
                 if ((filterType !== 'all') && (link.source.type !== filterType || link.target.type !== filterType)) return;
-
                 const grad = ctx.createLinearGradient(link.source.x, link.source.y, link.target.x, link.target.y);
                 grad.addColorStop(0, link.source.color);
                 grad.addColorStop(1, link.target.color);
@@ -360,18 +388,14 @@
                 ctx.stroke();
             });
 
-            // 绘制节点 (呼吸动画 + 外发光)
+            // 绘制节点
             ctx.globalCompositeOperation = 'source-over';
             ctx.globalAlpha = 1;
             visibleNodes.forEach(node => {
-                // 物理微动
                 node.x += Math.sin(Date.now()*0.001 + node.id)*0.3;
                 node.y += Math.cos(Date.now()*0.001 + node.id)*0.3;
-
-                // 呼吸效果
                 const breathe = Math.sin(Date.now() * 0.003 + node.id) * 3;
 
-                // 外发光
                 if (scale > 0.4) {
                     const grad = ctx.createRadialGradient(node.x, node.y, node.r*0.5, node.x, node.y, node.r*2 + breathe);
                     grad.addColorStop(0, node.color);
@@ -380,18 +404,15 @@
                     ctx.beginPath(); ctx.arc(node.x, node.y, node.r*2 + breathe, 0, Math.PI*2); ctx.fill();
                 }
 
-                // 核心
                 ctx.fillStyle = node.color;
                 ctx.beginPath(); ctx.arc(node.x, node.y, node.r, 0, Math.PI*2); ctx.fill();
 
-                // 选中高亮
                 if (node === selectedNode) {
                     ctx.strokeStyle = '#fff';
                     ctx.lineWidth = 3 / scale;
                     ctx.stroke();
                 }
 
-                // 文字 LOD (智能显示)
                 if (scale > 0.5 || node === selectedNode) {
                     ctx.fillStyle = '#fff';
                     ctx.textAlign = 'center';
@@ -404,8 +425,7 @@
             requestAnimationFrame(animate);
         }
 
-        // === 5. 交互逻辑 ===
-        // 拖拽与点击
+        // === 5. 交互逻辑 (锁定优化) ===
         container.addEventListener('mousedown', startDrag);
         container.addEventListener('touchstart', e => {
             if(e.touches.length === 2) {
@@ -414,7 +434,6 @@
                 initialScale = scale;
             } else startDrag(e.touches[0]);
         });
-
         container.addEventListener('mousemove', moveDrag);
         container.addEventListener('touchmove', e => {
             e.preventDefault();
@@ -423,7 +442,6 @@
                 scale = Math.min(Math.max(0.2, initialScale * (dist / initialDistance)), 5);
             } else if(isDragging) moveDrag(e.touches[0]);
         });
-
         container.addEventListener('mouseup', endDrag);
         container.addEventListener('touchend', endDrag);
         container.addEventListener('wheel', e => {
@@ -437,7 +455,6 @@
             const wx = (e.clientX - width/2 - offsetX) / scale;
             const wy = (e.clientY - height/2 - offsetY) / scale;
 
-            // 点击检测
             let hit = false;
             for(let i=nodes.length-1; i>=0; i--) {
                 const n = nodes[i];
@@ -446,9 +463,9 @@
                     selectNode(n); hit = true; break;
                 }
             }
-            if(!hit) deselectNode();
+            // 核心修改：点击空白处不再关闭弹窗！
+            // if(!hit) deselectNode(); // 删掉这行
         }
-
         function moveDrag(e) {
             if(!isDragging) return;
             offsetX += e.clientX - lastX; offsetY += e.clientY - lastY;
@@ -456,55 +473,97 @@
         }
         function endDrag() { isDragging = false; }
 
-        // 选中节点处理
         function selectNode(node) {
             selectedNode = node;
             const p = document.getElementById('nodeInfoPanel');
             document.getElementById('nodeTitle').innerText = node.label;
-            document.getElementById('nodeDesc').innerText = node.fullText + '\n\n' + node.desc;
-            document.getElementById('nodeTag').innerText = node.type.toUpperCase();
-            document.getElementById('nodeTag').style.borderColor = node.color;
-            document.getElementById('nodeTag').style.color = node.color;
+            document.getElementById('nodeDesc').innerText = node.fullText; // 显示全名
+            updateTagUI(node);
 
-            // AI 框处理
             const aiBox = document.getElementById('aiResultBox');
             if(node.ai) { aiBox.style.display = 'block'; aiBox.innerText = node.ai; }
             else { aiBox.style.display = 'none'; }
 
             p.classList.add('show');
         }
-        function deselectNode() {
+
+        // 专门的关闭函数
+        function closeNodePanel() {
             selectedNode = null;
             document.getElementById('nodeInfoPanel').classList.remove('show');
+            document.getElementById('nodeTitle').blur();
+            document.getElementById('nodeDesc').blur();
         }
 
-        // === 6. 功能逻辑 (分裂、筛选、管理) ===
+        // === 6. 核心功能 (编辑/删除/Tag切换) ===
+
+        function saveNodeData() {
+            if(!selectedNode) return;
+            selectedNode.label = document.getElementById('nodeTitle').innerText;
+            selectedNode.fullText = document.getElementById('nodeDesc').innerText;
+        }
+
+        function cycleNodeType() {
+            if(!selectedNode) return;
+            let idx = CONFIG.types.findIndex(t => t.id === selectedNode.type);
+            idx = (idx + 1) % CONFIG.types.length;
+            const newType = CONFIG.types[idx];
+            selectedNode.type = newType.id;
+            selectedNode.color = newType.color;
+            updateTagUI(selectedNode);
+        }
+
+        function updateTagUI(node) {
+            const tag = document.getElementById('nodeTag');
+            tag.innerText = node.type.toUpperCase();
+            tag.style.borderColor = node.color;
+            tag.style.color = node.color;
+        }
+
+        function renderTypePanel() {
+            const c = document.getElementById('typePanel');
+            const btn = c.querySelector('.add-type-btn');
+            c.innerHTML = '';
+            CONFIG.types.forEach((t, index) => {
+                const d = document.createElement('div');
+                d.className = 'type-item';
+                // 允许删除类目（至少保留一个）
+                const delBtn = CONFIG.types.length > 1 ? `<span class="del-type-btn" onclick="removeType(${index})">×</span>` : '';
+                d.innerHTML = `
+                    <div class="type-info"><div class="color-dot" style="background:${t.color}"></div><span>${t.name}</span></div>
+                    ${delBtn}
+                `;
+                c.appendChild(d);
+            });
+            c.appendChild(btn);
+        }
+
+        function removeType(index) {
+            if(confirm('确定删除该类目吗？关联节点将归入“杂项”。')) {
+                const typeId = CONFIG.types[index].id;
+                CONFIG.types.splice(index, 1);
+                nodes.forEach(n => {
+                    if(n.type === typeId) { n.type = 'misc'; n.color = CONFIG.colors.misc; }
+                });
+                renderTypePanel();
+                if(filterType === typeId) filterNodes('all', document.querySelector('.dock-item'));
+            }
+        }
 
         function triggerSplit() {
             if (!selectedNode) return;
-            // 模拟分裂动画
             for(let i=0; i<3; i++) {
                 const angle = Math.random() * Math.PI * 2;
                 const dist = 60 + Math.random()*40;
                 const child = {
-                    id: Date.now()+i,
-                    x: selectedNode.x, y: selectedNode.y, // 初始位置重合
-                    r: selectedNode.r * 0.7,
-                    color: selectedNode.color,
-                    label: 'Idea+',
-                    fullText: '拓展想法...',
-                    desc: 'Neural Split Generated',
-                    type: selectedNode.type,
-                    ai: '', vx: 0, vy: 0
+                    id: Date.now()+i, x: selectedNode.x, y: selectedNode.y,
+                    r: selectedNode.r * 0.7, color: selectedNode.color,
+                    label: 'Idea+', fullText: '拓展想法...', desc: '',
+                    type: selectedNode.type, ai: '', vx: 0, vy: 0
                 };
                 nodes.push(child);
                 links.push({source: selectedNode, target: child});
-
-                // 动画弹射
-                setTimeout(() => {
-                    child.x += Math.cos(angle) * dist;
-                    child.y += Math.sin(angle) * dist;
-                }, 50);
+                setTimeout(() => { child.x += Math.cos(angle) * dist; child.y += Math.sin(angle) * dist; }, 50);
             }
         }
 
@@ -513,7 +572,7 @@
             const box = document.getElementById('aiResultBox');
             box.style.display = 'block';
             box.innerText = "🧠 正在连接 NeuroLink AI 矩阵...\n(模拟数据: 该节点关联了深度学习与认知科学...)";
-            selectedNode.ai = box.innerText; // 保存
+            selectedNode.ai = box.innerText;
         }
 
         function filterNodes(type, el) {
@@ -531,25 +590,11 @@
             const name = prompt("输入新类目名称:");
             if(name) {
                 const id = 'custom_' + Date.now();
-                const color = CONFIG.colors.custom; // 默认黄
+                const color = CONFIG.colors.custom;
                 CONFIG.types.push({id, name, color});
                 CONFIG.colors[id] = color;
                 renderTypePanel();
             }
-        }
-
-        function renderTypePanel() {
-            const c = document.getElementById('typePanel');
-            // 保留最后一个添加按钮
-            const btn = c.querySelector('.add-type-btn');
-            c.innerHTML = '';
-            CONFIG.types.forEach(t => {
-                const d = document.createElement('div');
-                d.className = 'type-item';
-                d.innerHTML = `<div class="color-dot" style="background:${t.color}"></div><span>${t.name}</span>`;
-                c.appendChild(d);
-            });
-            c.appendChild(btn);
         }
 
         function goBack() { window.location.href = 'index.html'; }
@@ -558,4 +603,3 @@
     </script>
 </body>
 </html>
-
