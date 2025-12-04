@@ -145,7 +145,13 @@
             align-self: center; cursor: pointer; user-select: none;
         }
 
-        .node-desc { font-size: 13px; color: #aaa; margin-bottom: 15px; line-height: 1.5; max-height: 100px; overflow-y: auto; }
+        /* [修复] 详情可滑动，限制高度 */
+        .node-desc {
+            font-size: 13px; color: #aaa; margin-bottom: 15px; line-height: 1.5;
+            max-height: 300px; /* 限制最大高度 */
+            overflow-y: auto;  /* 超出部分滚动 */
+            white-space: pre-wrap; /* 保留换行 */
+        }
 
         /* 编辑状态样式 */
         .editable {
@@ -993,32 +999,40 @@ async function fetchModels() {
 
 
 // === [新增] 双向同步核心函数 ===
+// === [修复] 双向同步 (防重 + 严谨删除) ===
 function syncToMainApp(action, node) {
     const raw = localStorage.getItem('mb_bubbles');
     let bubbles = raw ? JSON.parse(raw) : [];
-    const todayStr = new Date().toISOString().split('T')[0]; // 获取今天日期
+    const todayStr = new Date().toISOString().split('T')[0];
 
     if (action === 'update') {
         const target = bubbles.find(b => b.id === node.id);
         if (target) {
-            target.ai = node.ai; // 同步 AI 内容
-            // target.detail = node.fullText; // 如果需要同步正文
+            target.ai = node.ai;
+            target.detail = node.fullText; // 同步正文
+            target.color = node.color;     // 同步颜色
         }
     } else if (action === 'delete') {
-        bubbles = bubbles.filter(b => b.id !== node.id);
+        // [修复] 确保类型一致再删 (ID 可能是数字或字符串)
+        bubbles = bubbles.filter(b => String(b.id) !== String(node.id));
     } else if (action === 'add') {
-        bubbles.push({
-            id: node.id,
-            date: todayStr, // 裂变的新想法归为今天
-            text: node.fullText || node.label, // 主App主要看text
-            detail: '',
-            ai: '',
-            color: node.color
-        });
+        // [关键修复] 防重检查！如果 ID 已存在，绝对不 Push！
+        const exists = bubbles.some(b => String(b.id) === String(node.id));
+        if (!exists) {
+            bubbles.push({
+                id: node.id,
+                date: todayStr,
+                text: node.label, // 标题
+                detail: node.fullText, // 正文
+                ai: node.ai,
+                color: node.color
+            });
+        }
     }
 
     localStorage.setItem('mb_bubbles', JSON.stringify(bubbles));
 }
+
 
         function goBack() { window.location.href = 'index.html'; }
 
@@ -1026,6 +1040,7 @@ function syncToMainApp(action, node) {
     </script>
 </body>
 </html>
+
 
 
 
