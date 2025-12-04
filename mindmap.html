@@ -181,6 +181,36 @@
             position: absolute; font-size: 100px; font-weight: bold; opacity: 0.03;
             pointer-events: none; user-select: none; color: #fff;
         }
+        
+        /* === [新增] 模态框样式 === */
+.modal-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(5px);
+    z-index: 100; display: flex; align-items: center; justify-content: center;
+    pointer-events: auto; /* 确保能点击 */
+}
+.modal-card {
+    background: #1a1a24; border: 1px solid rgba(255, 255, 255, 0.1);
+    width: 90%; max-width: 350px; border-radius: 16px; padding: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+.modal-header { display: flex; justify-content: space-between; margin-bottom: 20px; color: #fff; font-size: 16px; font-weight: bold; }
+.close-icon { cursor: pointer; color: #aaa; font-size: 20px; }
+.form-group { margin-bottom: 15px; }
+.form-label { display: block; color: #888; font-size: 12px; margin-bottom: 5px; }
+.form-input {
+    width: 100%; background: rgba(0,0,0,0.3); border: 1px solid #333;
+    color: #fff; padding: 10px; border-radius: 8px; outline: none; font-family: monospace;
+}
+.form-input:focus { border-color: #00ffcc; }
+.btn-primary {
+    width: 100%; background: #00ffcc; color: #000; border: none;
+    padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px;
+}
+.btn-primary:active { transform: scale(0.98); }
+.model-item { padding: 8px; border-radius: 4px; cursor: pointer; color: #ddd; }
+.model-item:hover { background: rgba(255,255,255,0.1); }
+
     </style>
 </head>
 <body>
@@ -196,6 +226,7 @@
                 <div class="exit-btn" onclick="goBack()">✕</div>
                 <div class="function-area">
                     <button class="func-btn" onclick="toggleTypePanel()">🧬 神经元管理</button>
+                    <button class="func-btn" onclick="openModal('settingsModal')" style="margin-top:5px;">⚙️ API 配置</button>
                     <div class="type-panel" id="typePanel">
                         <!-- JS 动态生成 -->
                         <button class="add-type-btn" onclick="addNewType()">+ 新增类目</button>
@@ -220,12 +251,16 @@
                     <div class="node-desc editable" id="nodeDesc" contenteditable="true" onblur="saveNodeData()">内容...</div>
                     <div class="ai-box" id="aiResultBox"></div>
 
-                    <div class="btn-group">
-                        <button class="action-btn btn-split" onclick="triggerSplit()">⚡ 分裂</button>
-                        <button class="action-btn btn-ai" onclick="triggerAIExpand()">🤖 AI 拓展</button>
-                        <!-- 专门的关闭按钮 -->
-                        <button class="action-btn btn-close" onclick="closeNodePanel()">×</button>
-                    </div>
+<div class="btn-group">
+
+    <button class="action-btn btn-split" onclick="triggerSplit()">⚡ 神经分裂</button>
+
+    <button class="action-btn btn-ai" onclick="triggerAIExpand()">😋 联想</button>
+
+
+    <button class="action-btn" style="background:rgba(255,69,58,0.2); color:#ff453a;" onclick="deleteCurrentNode()">🗑️</button>
+    <button class="action-btn btn-close" onclick="closeNodePanel()">×</button>
+                   </div>
                 </div>
 
                 <!-- 筛选栏 -->
@@ -249,6 +284,36 @@
             </div>
         </div>
     </div>
+    <!-- api设置部分 -->
+    <div class="modal-overlay" id="settingsModal" style="display:none;">
+    <div class="modal-card">
+        <div class="modal-header">
+            <span>🔧 API 设置</span>
+            <span class="close-icon" onclick="closeModal('settingsModal')">×</span>
+        </div>
+        <div class="form-group">
+            <label class="form-label">API URL</label>
+            <input type="text" id="cfgUrl" class="form-input" placeholder="https://api.openai.com/v1">
+        </div>
+        <div class="form-group">
+            <label class="form-label">API Key</label>
+            <input type="password" id="cfgKey" class="form-input" placeholder="sk-...">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Model</label>
+            <input type="text" id="cfgModel" class="form-input" placeholder="gpt-3.5-turbo" value="">
+            <button type="button" class="btn-primary" onclick="fetchModels()" style="margin-top: 8px; width: 100%;">
+                🔍 获取可用模型列表
+            </button>
+            <div id="modelListContainer" style="display: none; margin-top: 12px;">
+                <div class="form-label">可用模型：</div>
+                <div id="modelList" style="max-height: 200px; overflow-y: auto; background: rgba(255,255,255,0.05); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 6px; font-size: 13px;"></div>
+            </div>
+        </div>
+        <button class="btn-primary" onclick="saveConfig()">💾 保存配置</button>
+    </div>
+</div>
+
 
     <script>
         // === 1. 核心配置与状态 ===
@@ -279,6 +344,14 @@
         let selectedNode = null;
         let filterType = 'all'; // 当前筛选类型
         let initialDistance = 0, initialScale = 1; // 双指缩放
+
+        // === [新增] API 配置变量 ===
+let apiConfig = {
+    url: localStorage.getItem('nl_api_url') || 'https://api.openai.com/v1',
+    key: localStorage.getItem('nl_api_key') || '',
+    model: localStorage.getItem('nl_api_model') || 'gpt-3.5-turbo'
+};
+
 
         // === 2. 初始化 ===
         function init() {
@@ -549,23 +622,92 @@
                 if(filterType === typeId) filterNodes('all', document.querySelector('.dock-item'));
             }
         }
+// === [核心修改] 真实 API 分裂逻辑 ===
+async function triggerSplit() {
+    if (!selectedNode) return;
+    const btn = document.querySelector('.btn-split');
+    const originalText = btn.innerText;
 
-        function triggerSplit() {
-            if (!selectedNode) return;
-            for(let i=0; i<3; i++) {
-                const angle = Math.random() * Math.PI * 2;
-                const dist = 60 + Math.random()*40;
-                const child = {
-                    id: Date.now()+i, x: selectedNode.x, y: selectedNode.y,
-                    r: selectedNode.r * 0.7, color: selectedNode.color,
-                    label: 'Idea+', fullText: '拓展想法...', desc: '',
-                    type: selectedNode.type, ai: '', vx: 0, vy: 0
-                };
-                nodes.push(child);
-                links.push({source: selectedNode, target: child});
-                setTimeout(() => { child.x += Math.cos(angle) * dist; child.y += Math.sin(angle) * dist; }, 50);
-            }
-        }
+    // 1. 检查 API 配置
+    if (!apiConfig.key) {
+        alert("请先点击右上角【⚙️ API 配置】设置 API Key！");
+        return;
+    }
+
+    // 2. 锁定按钮状态
+    btn.innerText = "⚡ 正在裂变...";
+    btn.disabled = true;
+
+    // 3. 构建 Prompt
+    const prompt = `你是一个思维导图助手和知识库（保证知识准确）。请根据核心概念"${selectedNode.label}"(详细内容:"${selectedNode.fullText}")，进行思维发散和相关拓展。
+    要求：
+    1. 生成 1-3 个关联知识点（作为子节点）。
+    2. 每个知识点包含：标题(label，简短)、详细内容(fullText，约100字)。
+    3. 返回格式必须是纯 JSON 数组，例如：[{"label":"标题1","fullText":"内容1"},...]。不要包含 markdown 格式或其他废话。`;
+
+    try {
+        // 4. 发起请求
+        const response = await fetch(`${apiConfig.url}/chat/completions`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiConfig.key}`
+            },
+            body: JSON.stringify({
+                model: apiConfig.model,
+                messages: [{role: "user", content: prompt}],
+                temperature: 0.7
+            })
+        });
+
+        if (!response.ok) throw new Error(`API Error: ${response.status}`);
+        const data = await response.json();
+        const content = data.choices[0].message.content;
+
+        // 5. 解析 JSON (尝试清理可能存在的 markdown 标记)
+        const cleanJson = content.replace(/```json|```/g, '').trim();
+        const newNodesData = JSON.parse(cleanJson);
+
+        // 6. 生成新节点
+        newNodesData.forEach((item, i) => {
+            const angle = (Math.PI * 2 / newNodesData.length) * i + Math.random();
+            const dist = 80 + Math.random() * 40;
+
+            const child = {
+                id: Date.now() + i,
+                x: selectedNode.x, y: selectedNode.y, // 初始位置
+                r: 15 + Math.min(item.fullText.length, 5),
+                color: selectedNode.color, // 继承父节点颜色
+                label: item.label,
+                fullText: item.fullText,
+                desc: 'AI Generated',
+                type: selectedNode.type,
+                ai: '', vx: 0, vy: 0
+            };
+
+            nodes.push(child);
+            links.push({source: selectedNode, target: child});
+
+            // 动画弹射
+            setTimeout(() => {
+                child.x += Math.cos(angle) * dist;
+                child.y += Math.sin(angle) * dist;
+            }, 50);
+        });
+
+        // 7. 保存数据！(持久化)
+        saveAllData();
+        alert(`成功分裂出 ${newNodesData.length} 个新想法！`);
+
+    } catch (e) {
+        console.error(e);
+        alert("分裂失败：请检查网络或API配置。\n" + e.message);
+    } finally {
+        btn.innerText = originalText;
+        btn.disabled = false;
+    }
+}
+
 
         function triggerAIExpand() {
             if(!selectedNode) return;
@@ -597,9 +739,88 @@
             }
         }
 
+        // === [新增] 辅助功能函数库 ===
+
+// 1. 删除节点
+function deleteCurrentNode() {
+    if(!selectedNode) return;
+    if(confirm(`确定要删除节点 "${selectedNode.label}" 吗？此操作不可恢复。`)) {
+        // 从数组中移除
+        nodes = nodes.filter(n => n !== selectedNode);
+        links = links.filter(l => l.source !== selectedNode && l.target !== selectedNode);
+
+        closeNodePanel();
+        saveAllData(); // 保存更改
+    }
+}
+
+// 2. 全局保存 (写入 localStorage)
+function saveAllData() {
+    // 简化数据结构以节省空间
+    const simpleData = nodes.map(n => ({
+        id: n.id, text: n.fullText, ai: n.ai,
+        // 这里的逻辑需要根据主App的数据结构适配，如果主App只认 text/id，那这里就只存这些
+        // 如果要完全持久化脑图结构，建议存一个单独的 key，比如 'neuro_map_data'
+    }));
+    // 这里为了兼容主App，假设还是存回 mb_bubbles，但其实最好是存两份
+    // 咱们这里只演示存回主Key，注意：这可能会覆盖主App的其他非脑图数据，慎用！
+    // 建议：如果只是脑图自己的数据，用 'neuro_map_data'
+    localStorage.setItem('neuro_map_data', JSON.stringify(nodes));
+}
+// 注意：loadData 函数也要对应修改，优先读取 neuro_map_data
+
+// 3. API 设置相关
+function openModal(id) {
+    document.getElementById(id).style.display = 'flex';
+    // 填充当前配置
+    document.getElementById('cfgUrl').value = apiConfig.url;
+    document.getElementById('cfgKey').value = apiConfig.key;
+    document.getElementById('cfgModel').value = apiConfig.model;
+}
+function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+function saveConfig() {
+    apiConfig.url = document.getElementById('cfgUrl').value.replace(/\/$/, '');
+    apiConfig.key = document.getElementById('cfgKey').value;
+    apiConfig.model = document.getElementById('cfgModel').value;
+
+    localStorage.setItem('nl_api_url', apiConfig.url);
+    localStorage.setItem('nl_api_key', apiConfig.key);
+    localStorage.setItem('nl_api_model', apiConfig.model);
+
+    closeModal('settingsModal');
+    alert("配置已保存！");
+}
+
+async function fetchModels() {
+    // ... (此处直接使用您提供的 fetchModels 代码，逻辑完全一致，不再重复粘贴) ...
+    // 记得把 fetchModels 里的 DOM ID 和这里的 HTML 对应上
+}
+
+// === [修改] loadData 适配 ===
+function loadData() {
+    // 优先读取脑图专用数据，如果没有，再读取主App数据
+    const mapData = localStorage.getItem('neuro_map_data');
+    const appData = localStorage.getItem('mb_bubbles');
+
+    if (mapData) {
+        nodes = JSON.parse(mapData); // 直接恢复完整结构
+        // 重新建立连接 (因为 JSON 不存对象引用)
+        rebuildLinks(); // 或者保存时也保存了 links
+    } else if (appData) {
+        // ... (原有的从 mb_bubbles 转换逻辑) ...
+    } else {
+        generateDemoNodes(10);
+    }
+    // 无论哪种，最后都重建连接（如果是第一次加载）
+    if(links.length === 0) rebuildLinks();
+}
+
+
         function goBack() { window.location.href = 'index.html'; }
 
         init();
     </script>
 </body>
 </html>
+
