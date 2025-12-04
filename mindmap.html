@@ -796,25 +796,140 @@ async function fetchModels() {
     // ... (此处直接使用您提供的 fetchModels 代码，逻辑完全一致，不再重复粘贴) ...
     // 记得把 fetchModels 里的 DOM ID 和这里的 HTML 对应上
 }
+        // === [Patch] 修正后的数据加载逻辑 ===
 
-// === [修改] loadData 适配 ===
-function loadData() {
-    // 优先读取脑图专用数据，如果没有，再读取主App数据
-    const mapData = localStorage.getItem('neuro_map_data');
-    const appData = localStorage.getItem('mb_bubbles');
+        function loadData() {
+            // 1. 初始化空数组
+            nodes = [];
+            links = [];
 
-    if (mapData) {
-        nodes = JSON.parse(mapData); // 直接恢复完整结构
-        // 重新建立连接 (因为 JSON 不存对象引用)
-        rebuildLinks(); // 或者保存时也保存了 links
-    } else if (appData) {
-        // ... (原有的从 mb_bubbles 转换逻辑) ...
-    } else {
-        generateDemoNodes(10);
-    }
-    // 无论哪种，最后都重建连接（如果是第一次加载）
-    if(links.length === 0) rebuildLinks();
-}
+            // 2. 读取两份数据源
+            // source A: 脑图原生数据 (优先级高，包含位置信息)
+            const rawMapData = localStorage.getItem('neuro_map_data');
+            // source B: 主App数据 (您的宝贵遗产)
+            const rawAppData = localStorage.getItem('mb_bubbles');
+
+            let mapNodes = [];
+            let appNodes = [];
+
+            // 3. 解析脑图原生数据
+            if (rawMapData) {
+                try {
+                    mapNodes = JSON.parse(rawMapData);
+                } catch(e) { console.error("脑图数据损坏", e); }
+            }
+
+            // 4. 解析并转换主App数据
+            if (rawAppData) {
+                try {
+                    const bubbles = JSON.parse(rawAppData);
+                    // 转换核心：把 Bubble 变成 Node
+                    appNodes = bubbles.map((b, i) => {
+                        // 智能类型检测 (保持颜色一致)
+                        const type = detectType(b.text);
+
+                        return {
+                            id: b.id, // 保持 ID 一致，方便去重
+                            // 如果是新数据，给个随机位置；如果是旧数据，稍后会被 mapNodes 覆盖
+                            x: (Math.random() - 0.5) * 600,
+                            y: (Math.random() - 0.5) * 600,
+                            r: 15 + Math.min(b.text.length, 10),
+                            color: b.color || CONFIG.colors[type] || '#BF5AF2', // 优先用主App的颜色
+                            label: b.text.length > 8 ? b.text.substring(0, 8) + '...' : b.text,
+                            fullText: b.text,
+                            // 整合 detail 和 ai 字段
+                            desc: (b.detail ? `[笔记]: ${b.detail}\n` : '') + (b.ai ? `\n[AI]: ${b.ai}` : '暂无详细描述...'),
+                            type: type,
+                            ai: b.ai || '',
+                            vx: 0, vy: 0,
+                            source: 'app' // 标记来源
+                        };
+                    });
+                } catch(e) { console.error("主App数据解析失败", e); }
+            }
+
+            // 5. 数据融合 (Merge)
+            // 策略：以 App 数据为基础，如果 Map 数据里有位置信息，就更新位置
+            // 这样既能看到新加的 Bubble，又能保留拖拽后的位置
+
+            // 创建一个 Map 方便查找，Key 是 ID
+            const nodeMap = new Map();
+
+            // 先把 App 的数据放进去
+            appNodes.forEach(n => nodeMap.set(n.id, n));
+
+            // 再把 Map 的数据覆盖进去 (主要是位置 x,y 和 links)
+            mapNodes.forEach(n => {
+                if (nodeMap.has(n.id)) {
+                    // 如果 ID 存在，更新位置和特定属性，保留 App 的最新文本
+                    const existing = nodeMap.get(n.id);
+                    existing.x = n.x;
+                    existing.y = n.y;
+                    existing.expanded = n.expanded; // 比如是否已分裂
+                } else {
+                    // 如果 App 里没了（被删了）但 Map 里还有...
+                    // 策略：看您喜好，这里默认保留，防止误删
+                    // 标记为脑图特有
+                    n.source = 'map';
+                    nodeMap.set(n.id, n);
+                }
+            });
+
+            // 转回数组
+            nodes = Array.from(nodeMap.values());
+
+            // 6. 如果完全没数据，搞点 Demo
+            if (nodes.length === 0) {
+                generateDemoNodes(10);
+            }
+
+            // 7. 重建连接 (简单的临近连接，让图看起来不散)
+            // 注意：真实的连接关系应该存起来，这里为了省事每次重算一遍随机连接
+            // 如果您希望连接关系也持久化，需要把 links 也存进 localStorage
+            rebuildLinks();
+        }
+
+        // [辅助] 类型检测 (保持不变)
+        function detectType(text) {
+            const t = text.toLowerCase();
+            if (/语言|英语|日文|单词|语法|speak/i.test(t)) return 'language';
+            if (/数学|物理|代码|js|算法|logic/i.test(t)) return 'science';
+            if (/游戏|电影|赛车|f1|玩|fun/i.test(t)) return 'entertainment';
+            return 'misc';
+        }
+
+        // [辅助] 每次加载重置连接 (可改为从存储读取)
+        function rebuildLinks() {
+            links = [];
+            // 简单的随机连线，模拟神经网络
+            // 优化：只连接同类型的，或者距离近的
+            nodes.forEach((node, i) => {
+                // 每个节点尝试连接 1-2 个邻居
+                let targets = 1 + Math.floor(Math.random() * 2);
+                for (let j = 0; j < targets; j++) {
+                    let targetIdx = Math.floor(Math.random() * nodes.length);
+                    if (targetIdx !== i) {
+                        // 简单防重
+                        links.push({ source: node, target: nodes[targetIdx] });
+                    }
+                }
+            });
+        }
+
+        // [Patch] 保存逻辑也要微调，防止把 App 的数据写坏
+        // 我们只保存“位置”和“脑图特有属性”到 neuro_map_data
+        // App 的原生数据 (text, color) 不在这里改，除非您想双向同步
+
+        function saveAllData() {
+            // 存完整的一份到 neuro_map_data，作为脑图的“存档”
+            // 这样下次进来，位置就被记住了
+            localStorage.setItem('neuro_map_data', JSON.stringify(nodes));
+
+            // 提示：目前是单向同步 (App -> Map)
+            // 如果在 Map 里改了字，App 不会变。想变的话得反向写回 mb_bubbles，有点风险。
+            // 建议：脑图作为“查看+发散”工具，修改还是回主页改比较安全。
+        }
+
 
 
         function goBack() { window.location.href = 'index.html'; }
@@ -823,4 +938,5 @@ function loadData() {
     </script>
 </body>
 </html>
+
 
