@@ -349,11 +349,11 @@
     <!-- 待办事项 -->
     <div class="todo-section">
         <div class="todo-header">
-            <span>📝 今日待办</span>
+            <span>📝 TODO LIST</span>
             <span id="todoCount">0/0</span>
         </div>
         <div id="todoList"></div>
-        <div class="add-todo-btn" onclick="addTodo()">+ 新建待办</div>
+        <div class="add-todo-btn" onclick="addTodo()">+ NEW</div>
     </div>
 
     <!-- 主舞台 -->
@@ -432,9 +432,9 @@
     <!-- 2. 日记 & 心情 -->
     <div class="modal-overlay" id="diaryModal">
         <div class="modal-card">
-            <div class="modal-header"><span id="diaryTitle">今日日记</span><span class="close-icon" onclick="closeModal('diaryModal')">×</span></div>
+            <div class="modal-header"><span id="diaryTitle">TODAYS DIARY</span><span class="close-icon" onclick="closeModal('diaryModal')">×</span></div>
 
-            <label class="form-label">今日心情</label>
+            <label class="form-label">MOOD</label>
             <div class="mood-selector">
                 <div class="mood-item" style="color:var(--mood-red)" onclick="setMood('red')"></div>
                 <div class="mood-item" style="color:var(--mood-orange)" onclick="setMood('orange')"></div>
@@ -445,8 +445,8 @@
 
             <div id="aiSummaryRef" class="ai-content-box" style="margin-bottom:15px; border-left-color:var(--accent-blue);"></div>
 
-            <label class="form-label">日记内容</label>
-            <textarea id="diaryInput" class="form-textarea" placeholder="今天发生了什么..."></textarea>
+            <label class="form-label">COMMENT</label>
+            <textarea id="diaryInput" class="form-textarea" placeholder="What happened..."></textarea>
             <button class="btn-primary" onclick="saveDiary()">保存日记</button>
         </div>
     </div>
@@ -784,7 +784,7 @@
             box.style.display = 'block';
             box.innerHTML = '<span class="loading-spin">⏳</span> 思考中...';
 
-            const prompt = `请对该想法/知识点进行深度拓展、发散思维或补充背景(500-2000字)：\n${b.detail || b.text}`;
+            const prompt = `你是一个学识渊博且坚决抵制学术造假的智能知识库，请对该想法/知识点进行深度拓展、发散思维或补充背景(500-2000字)（禁止输出前言，直接输出相关知识点或者拓展，直入正题，绝对保证知识的最新和最正确）：\n${b.detail || b.text}`;
             const res = await callAI(prompt);
 
             if(res) {
@@ -811,7 +811,7 @@
             const aiBox = document.getElementById('aiSummaryRef');
             if(d.aiSummary) {
                 aiBox.style.display = 'block';
-                aiBox.innerText = "✨ AI 整理: " + d.aiSummary;
+                aiBox.innerText = "今日干了啥？: " + d.aiSummary;
             } else {
                 aiBox.style.display = 'none';
             }
@@ -843,12 +843,12 @@
 
             const btn = document.querySelector('.dock-btn.highlight');
             const oldTxt = btn.innerText;
-            btn.innerText = '⏳ 分析中...';
+            btn.innerText = '⏳ 查找宇宙知识库...';
 
             const txt = list.map(b => `- ${b.text}`).join('\n');
             const prompt = `
                 请根据以下今日碎片想法，生成JSON：
-                {"summary": "今日一句话总结", "categories": [{"name":"类别名","count":数字}]}
+                {"summary": "今日一句话幽默嘴毒总结", "categories": [{"name":"类别名","count":数字}]}
 
                 内容：
                 ${txt}
@@ -921,7 +921,7 @@
             document.getElementById('cardDate').innerText = item.date;
             document.getElementById('cardFront').innerText = item.text;
             document.getElementById('cardBack').style.display = 'none';
-            document.getElementById('cardBack').innerText = item.ai || '(无 AI 拓展)';
+            document.getElementById('cardBack').innerText = item.ai || '(无 拓展)';
         }
 
         function flipCard() {
@@ -1047,10 +1047,10 @@ function updateDataStats() {
     };
     
     document.getElementById('dataStats').innerHTML = `
-        <div>📝 灵感气泡: ${stats.bubbles} 个</div>
-        <div>✓ 待办事项: ${stats.todos} 条</div>
-        <div>📖 日记记录: ${stats.diaries} 天</div>
-        <div>📅 有数据天数: ${stats.dates} 天</div>
+        <div>📝 bubble: ${stats.bubbles} 个</div>
+        <div>✓ todo: ${stats.todos} 条</div>
+        <div>📖 diaries: ${stats.diaries} 天</div>
+        <div>📅 hv date: ${stats.dates} 天</div>
     `;
 }
 
@@ -1099,7 +1099,7 @@ function importData(event) {
                 throw new Error('无效的数据文件格式');
             }
             
-            if (confirm(`是否导入数据？\n\n包含：\n• ${importedData.bubbles.length} 个灵感气泡\n• ${Object.values(importedData.todos).flat().length} 条待办\n• ${Object.keys(importedData.diaries).length} 天日记\n\n注意：这将覆盖现有数据！`)) {
+            if (confirm(`是否导入数据？\n\n包含：\n• ${importedData.bubbles.length} 个Bubble\n• ${Object.values(importedData.todos).flat().length} 条待办\n• ${Object.keys(importedData.diaries).length} 天日记\n\n注意：这将覆盖现有数据！`)) {
                 // 覆盖数据
                 DB.bubbles = importedData.bubbles;
                 DB.todos = importedData.todos;
@@ -1288,6 +1288,7 @@ function getCurrentModel() {
     </script>
 </body>
 </html>
+
 
 
 
