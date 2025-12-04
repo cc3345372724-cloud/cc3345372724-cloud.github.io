@@ -612,29 +612,36 @@
         };
 
         // 初始化
-        window.onload = () => {
-            // 加载配置
-            document.getElementById('cfgUrl').value = DB.config.url;
-            document.getElementById('cfgKey').value = DB.config.key;
-            document.getElementById('cfgModel').value = DB.config.model;
-            if(DB.config.bg) document.getElementById('bgImage').style.backgroundImage = `url('${DB.config.bg}')`;
+// 修改 init 部分，添加颜色选择器的事件监听
+window.onload = () => {
+    // 加载配置...
+    document.getElementById('cfgUrl').value = DB.config.url;
+    document.getElementById('cfgKey').value = DB.config.key;
+    document.getElementById('cfgModel').value = DB.config.model;
+    if(DB.config.bg) document.getElementById('bgImage').style.backgroundImage = `url('${DB.config.bg}')`;
 
-            // 绑定背景上传
-            document.getElementById('bgFileInput').addEventListener('change', e => {
-                const f = e.target.files[0];
-                if(f) {
-                    const r = new FileReader();
-                    r.onload = ev => document.getElementById('bgUrlInput').value = ev.target.result;
-                    r.readAsDataURL(f);
-                }
-            });
+    // 绑定背景上传...
+    document.getElementById('bgFileInput').addEventListener('change', e => {
+        const f = e.target.files[0];
+        if(f) {
+            const r = new FileReader();
+            r.onload = ev => document.getElementById('bgUrlInput').value = ev.target.result;
+            r.readAsDataURL(f);
+        }
+    });
 
-            // 绑定输入回车
-            document.getElementById('mainInput').addEventListener('keypress', e => e.key==='Enter' && addBubble());
+    // 绑定输入回车...
+    document.getElementById('mainInput').addEventListener('keypress', e => e.key==='Enter' && addBubble());
+    
+    // 新增：初始化颜色选择器点击事件
+    document.querySelectorAll('.color-opt').forEach(opt => {
+        // 获取元素的背景色作为颜色值
+        const color = opt.style.backgroundColor;
+        opt.onclick = () => setBubbleColor(color);
+    });
 
-            updateDateState(new Date()); // 默认今天
-        };
-
+    updateDateState(new Date());
+};
         function updateDateState(date) {
             STATE.viewDate = date;
             STATE.curDateStr = UTILS.fmt(date);
@@ -753,36 +760,47 @@
                 stage.appendChild(el);
             });
         }
+function addBubble() {
+    const input = document.getElementById('mainInput');
+    const val = input.value.trim();
+    if(!val) return;
 
-        function addBubble() {
-            const input = document.getElementById('mainInput');
-            const val = input.value.trim();
-            if(!val) return;
+    DB.bubbles.push({
+        id: Date.now(), 
+        date: STATE.curDateStr,
+        text: val, 
+        detail: '', 
+        ai: '', 
+        color: UTILS.randColor() // 确保新气泡有颜色
+    });
+    
+    input.value = '';
+    saveAll();
+    renderStage();
+    renderCalendar(); // 更新小点
 
-            // 强制添加至“今天”还是“当前视图”？逻辑：跟随当前视图
-            DB.bubbles.push({
-                id: Date.now(), date: STATE.curDateStr,
-                text: val, detail: '', ai: '', color: UTILS.randColor()
-            });
-            input.value = '';
-            saveAll();
-            renderStage();
-            renderCalendar(); // 更新小点
-
-            // 滚动
-            setTimeout(() => document.querySelector('.main-stage').scrollTop = 99999, 100);
-        }
+    setTimeout(() => document.querySelector('.main-stage').scrollTop = 99999, 100);
+}
 
         // === 4. 详情 & AI ===
-        function openBubbleDetail(id) {
-            STATE.curBubbleId = id;
-            const b = DB.bubbles.find(i => i.id === id);
-            document.getElementById('bubbleDetail').value = b.detail || b.text;
-            const res = document.getElementById('bubbleAiResult');
-            res.innerHTML = b.ai || '';
-            res.style.display = b.ai ? 'block' : 'none';
-            openModal('bubbleModal');
-        }
+     function openBubbleDetail(id) {
+    STATE.curBubbleId = id;
+    const b = DB.bubbles.find(i => i.id === id);
+    document.getElementById('bubbleDetail').value = b.detail || b.text;
+    const res = document.getElementById('bubbleAiResult');
+    res.innerHTML = b.ai || '';
+    res.style.display = b.ai ? 'block' : 'none';
+    
+    // 新增：设置当前气泡颜色，并更新颜色选择器UI
+    if (b && b.color) {
+        STATE.curBubbleColor = b.color;
+    } else {
+        STATE.curBubbleColor = '#BF5AF2'; // 默认紫色
+    }
+    updateColorUI(STATE.curBubbleColor);
+    
+    openModal('bubbleModal');
+}
 
         function saveBubble() {
             const b = DB.bubbles.find(i => i.id === STATE.curBubbleId);
@@ -833,50 +851,65 @@
 
         // 2. [新增] 颜色选择逻辑
         let tempColor = '#BF5AF2'; // 临时存颜色
-        function setBubbleColor(color) {
-            tempColor = color;
-            updateColorUI(color);
-        }
-        function updateColorUI(color) {
-            // 更新选中样式
-            document.querySelectorAll('.color-opt').forEach(el => {
-                // 简单的颜色匹配，实际可能需要更严谨的转换
-                if(el.style.backgroundColor.toUpperCase() === color.toUpperCase()) el.classList.add('active');
-                else el.classList.remove('active');
-            });
-            document.getElementById('customColorPicker').value = color;
-            document.getElementById('curColorVal').innerText = color;
-        }
+// 修改后的颜色选择逻辑
+function setBubbleColor(color) {
+    STATE.curBubbleColor = color;
+    updateColorUI(color);
+}
 
-        // 3. [修改] 保存逻辑 (带颜色)
-        function saveBubble() {
-            const text = document.getElementById('bubbleTitle').value.trim();
-            const detail = document.getElementById('bubbleDetail').value;
-            if(!text) return alert('写点啥吧？');
-
-            if (STATE.curBubbleId) {
-                // 更新
-                const b = DB.bubbles.find(i => i.id === STATE.curBubbleId);
-                if(b) {
-                    b.text = text;
-                    b.detail = detail;
-                    b.color = tempColor; // [新增] 保存颜色
-                }
-            } else {
-                // 新增
-                DB.bubbles.push({
-                    id: Date.now(),
-                    date: STATE.selectedDate,
-                    text: text,
-                    detail: detail,
-                    color: tempColor, // [新增] 保存颜色
-                    ai: ''
-                });
-            }
-            saveAll();
-            renderStage();
-            closeModal('bubbleModal');
+function updateColorUI(color) {
+    // 更新颜色选项的选中状态
+    document.querySelectorAll('.color-opt').forEach(el => {
+        const elColor = el.style.backgroundColor;
+        // 将颜色值转换为一致的格式进行比较
+        const rgbToHex = (rgb) => {
+            const match = rgb.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
+            if (!match) return rgb; // 如果已经是十六进制，直接返回
+            return "#" + match.slice(1).map(n => parseInt(n, 10).toString(16).padStart(2, '0')).join('');
+        };
+        
+        const elHex = rgbToHex(elColor).toUpperCase();
+        const targetHex = color.toUpperCase();
+        
+        if (elHex === targetHex || elColor === color) {
+            el.classList.add('active');
+        } else {
+            el.classList.remove('active');
         }
+    });
+    
+    // 更新自定义颜色选择器
+    document.getElementById('customColorPicker').value = color;
+    document.getElementById('curColorVal').innerText = color;
+}
+        
+function saveBubble() {
+    const b = DB.bubbles.find(i => i.id === STATE.curBubbleId);
+    if (!b) return;
+    
+    // 获取编辑后的内容
+    const newDetail = document.getElementById('bubbleDetail').value;
+    
+    // 如果详情与原始文本不同，则保存到detail字段，否则保存到text字段
+    if (newDetail !== b.text) {
+        b.detail = newDetail;
+    } else {
+        b.text = newDetail;
+        b.detail = '';
+    }
+    
+    // 新增：保存气泡颜色
+    b.color = STATE.curBubbleColor;
+    
+    // 保存到本地存储
+    saveAll();
+    
+    // 重新渲染气泡显示
+    renderStage();
+    
+    // 关闭模态框
+    closeModal('bubbleModal');
+}
 
         // 4. [核心修改] AI 内容直接内化 (无弹窗，直接追加)
         async function triggerBubbleExpand() {
@@ -1400,6 +1433,17 @@ function displayModels(models) {
     });
 }
 
+
+        // === 在 STATE 对象中添加一个变量来存储当前气泡的颜色 ===
+const STATE = {
+    viewDate: new Date(),
+    curDateStr: '',
+    curBubbleId: null,
+    reviewQueue: [],
+    reviewIdx: 0,
+    // 新增：当前编辑的气泡颜色
+    curBubbleColor: '#BF5AF2' // 默认颜色
+};
 // === 10. 修改callAI函数，使用配置的模型 ===
 // 原来的callAI函数已经使用DB.config.model，不需要修改
 // 但可以添加一个获取当前模型的小函数
@@ -1409,6 +1453,7 @@ function getCurrentModel() {
     </script>
 </body>
 </html>
+
 
 
 
