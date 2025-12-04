@@ -6,10 +6,11 @@
     <title>NeuroLink OS - Mind Map Ultimate</title>
 
     <!-- === 0. 全屏模式适配 (iOS WebClip) === -->
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <!-- 设置状态栏样式为黑色透明 (让内容顶上去) -->
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#050508">
+<meta name="apple-mobile-web-app-capable" content="yes">
+
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#050508">
+
 
     <style>
         /* === 1. 核心变量 (视觉基调) === */
@@ -145,13 +146,14 @@
             align-self: center; cursor: pointer; user-select: none;
         }
 
-        /* [修复] 详情可滑动，限制高度 */
-        .node-desc {
-            font-size: 13px; color: #aaa; margin-bottom: 15px; line-height: 1.5;
-            max-height: 300px; /* 限制最大高度 */
-            overflow-y: auto;  /* 超出部分滚动 */
-            white-space: pre-wrap; /* 保留换行 */
-        }
+/* [修复] 详情可滑动，限制高度 */
+.node-desc {
+    font-size: 13px; color: #aaa; margin-bottom: 15px; line-height: 1.5;
+    max-height: 300px; /* 限制最大高度，大概半个屏幕 */
+    overflow-y: auto;  /* 超出部分显示滚动条 */
+    white-space: pre-wrap; /* 保留换行 */
+}
+
 
         /* 编辑状态样式 */
         .editable {
@@ -999,6 +1001,7 @@ async function fetchModels() {
 
 
 // === [新增] 双向同步核心函数 ===
+
 // === [修复] 双向同步 (防重 + 严谨删除) ===
 function syncToMainApp(action, node) {
     const raw = localStorage.getItem('mb_bubbles');
@@ -1029,9 +1032,60 @@ function syncToMainApp(action, node) {
             });
         }
     }
-
     localStorage.setItem('mb_bubbles', JSON.stringify(bubbles));
 }
+// === [Patch] 修正后的数据加载逻辑 ===
+function loadData() {
+    nodes = []; links = [];
+    // 读取两份数据
+    const rawMapData = localStorage.getItem('neuro_map_data'); // 脑图特有数据(位置)
+    const rawAppData = localStorage.getItem('mb_bubbles');     // 主App数据(内容/颜色)
+
+    let mapNodes = rawMapData ? JSON.parse(rawMapData) : [];
+    let appNodes = rawAppData ? JSON.parse(rawAppData) : [];
+
+    // 创建Map方便查找
+    const nodeMap = new Map();
+
+    // 1. 先载入App数据 (保证内容最新)
+    appNodes.forEach(b => {
+        const type = detectType(b.text);
+        nodeMap.set(b.id, {
+            id: b.id,
+            // 如果Map数据里有位置就用Map的，没有就随机
+            x: (Math.random() - 0.5) * 600,
+            y: (Math.random() - 0.5) * 600,
+            r: 15 + Math.min(b.text.length, 10),
+            color: b.color || CONFIG.colors[type] || '#BF5AF2', // 优先用主App存的颜色
+            label: b.text.substring(0, 8) + '...',
+            fullText: b.text,
+            desc: (b.detail||'') + (b.ai?`\n[AI]: ${b.ai}`:''),
+            type: type,
+            ai: b.ai || '',
+            vx: 0, vy: 0,
+            source: 'app'
+        });
+    });
+
+    // 2. 用Map数据覆盖位置信息
+    mapNodes.forEach(n => {
+        if (nodeMap.has(n.id)) {
+            const existing = nodeMap.get(n.id);
+            existing.x = n.x;
+            existing.y = n.y;
+            // 注意：不要覆盖color和text，以App数据为准
+        } else {
+            // 如果App里删了，脑图里还有，看你需不需要保留。这里为了演示先保留
+             n.source = 'map';
+             nodeMap.set(n.id, n);
+        }
+    });
+
+    nodes = Array.from(nodeMap.values());
+    if (nodes.length === 0) generateDemoNodes(10);
+    rebuildLinks();
+}
+
 
 
         function goBack() { window.location.href = 'index.html'; }
@@ -1040,6 +1094,7 @@ function syncToMainApp(action, node) {
     </script>
 </body>
 </html>
+
 
 
 
