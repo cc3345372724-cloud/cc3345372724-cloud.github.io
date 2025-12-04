@@ -1029,18 +1029,21 @@
             document.getElementById('reviewPlay').style.display = 'block';
             showCard();
         }
-
-        function showCard() {
-            if(STATE.reviewIdx >= STATE.reviewQueue.length) {
-                alert('复习完成！');
-                return closeModal('reviewModal');
-            }
-            const item = STATE.reviewQueue[STATE.reviewIdx];
-            document.getElementById('cardDate').innerText = item.date;
-            document.getElementById('cardFront').innerText = item.text;
-            document.getElementById('cardBack').style.display = 'none';
-            document.getElementById('cardBack').innerText = item.ai || '(无 拓展)';
-        }
+        
+function showCard() {
+    if(STATE.reviewIdx >= STATE.reviewQueue.length) {
+        alert('复习完成！');
+        return closeModal('reviewModal');
+    }
+    const item = STATE.reviewQueue[STATE.reviewIdx];
+    document.getElementById('cardDate').innerText = item.date;
+    document.getElementById('cardFront').innerText = item.text;
+    document.getElementById('cardBack').style.display = 'none';
+    
+    // 修改这行：优先显示detail字段，如果没有则显示ai，都没有则显示无内容
+    const backText = item.detail || item.ai || '(无内容)';
+    document.getElementById('cardBack').innerText = backText;
+}
 
         function flipCard() {
             const back = document.getElementById('cardBack');
@@ -1406,6 +1409,7 @@ function getCurrentModel() {
     </script>
 </body>
 </html>
+
 
 
 
