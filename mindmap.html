@@ -584,15 +584,27 @@ let apiConfig = {
             selectedNode.fullText = document.getElementById('nodeDesc').innerText;
         }
 
-        function cycleNodeType() {
-            if(!selectedNode) return;
-            let idx = CONFIG.types.findIndex(t => t.id === selectedNode.type);
-            idx = (idx + 1) % CONFIG.types.length;
-            const newType = CONFIG.types[idx];
-            selectedNode.type = newType.id;
-            selectedNode.color = newType.color;
-            updateTagUI(selectedNode);
-        }
+ function cycleNodeType() {
+    if(!selectedNode) return;
+
+    // 1. 切换类型
+    let idx = CONFIG.types.findIndex(t => t.id === selectedNode.type);
+    idx = (idx + 1) % CONFIG.types.length;
+    const newType = CONFIG.types[idx];
+
+    selectedNode.type = newType.id;
+    selectedNode.color = newType.color;
+
+    // 2. 更新 UI
+    updateTagUI(selectedNode);
+
+    // 3. [关键修复] 同步保存！
+    // 同步颜色和类型到主 App (如果主 App 存了颜色的话)
+    syncToMainApp('update', selectedNode);
+    // 保存本地脑图数据
+    saveAllData();
+}
+
 
         function updateTagUI(node) {
             const tag = document.getElementById('nodeTag');
@@ -1094,6 +1106,7 @@ function loadData() {
     </script>
 </body>
 </html>
+
 
 
 
