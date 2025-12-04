@@ -290,6 +290,9 @@
         .legend-item { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
         .dot { width: 8px; height: 8px; border-radius: 2px; }
 
+                /* [新增] 颜色选中态 */
+        .color-opt.active { border-color: #fff !important; transform: scale(1.1); }
+
         /* 模型列表样式 */
 .model-item:hover {
     background: rgba(255,255,255,0.1) !important;
@@ -466,6 +469,22 @@
             <div id="bubbleAiResult" class="ai-content-box"></div>
         </div>
     </div>
+            <div class="form-group" style="margin-bottom:15px;">
+                <label style="display:block; color:#666; font-size:12px; margin-bottom:5px;">气泡颜色</label>
+                <div class="color-picker-row" style="display:flex; gap:10px; align-items:center;">
+
+                    <div class="color-opt" onclick="setBubbleColor('#FF453A')" style="background:#FF453A; width:24px; height:24px; border-radius:50%; cursor:pointer; border:2px solid transparent;"></div>
+                    <div class="color-opt" onclick="setBubbleColor('#0A84FF')" style="background:#0A84FF; width:24px; height:24px; border-radius:50%; cursor:pointer; border:2px solid transparent;"></div>
+                    <div class="color-opt" onclick="setBubbleColor('#FFD60A')" style="background:#FFD60A; width:24px; height:24px; border-radius:50%; cursor:pointer; border:2px solid transparent;"></div>
+                    <div class="color-opt" onclick="setBubbleColor('#30D158')" style="background:#30D158; width:24px; height:24px; border-radius:50%; cursor:pointer; border:2px solid transparent;"></div>
+                    <div class="color-opt" onclick="setBubbleColor('#BF5AF2')" style="background:#BF5AF2; width:24px; height:24px; border-radius:50%; cursor:pointer; border:2px solid transparent;"></div>
+
+                    <div style="position:relative; width:24px; height:24px; border-radius:50%; overflow:hidden; border:1px solid #555;">
+                        <input type="color" id="customColorPicker" onchange="setBubbleColor(this.value)" style="position:absolute; top:-50%; left:-50%; width:200%; height:200%; cursor:pointer; padding:0; margin:0; border:none;">
+                    </div>
+                    <span id="curColorVal" style="font-size:10px; color:#666; margin-left:auto;">#------</span>
+                </div>
+            </div>
 
     <!-- 4. 复习模式 -->
     <div class="modal-overlay" id="reviewModal">
@@ -778,49 +797,120 @@
             closeModal('bubbleModal');
         }
 
-        // === [核心修改] 后台静默 AI 拓展 ===
-async function triggerBubbleExpand() {
-    const b = DB.bubbles.find(i => i.id === STATE.curBubbleId);
-    if (!b) return;
+                // 1. [修改] 打开编辑框 (回显颜色)
+        function openBubbleModal(id) {
+            const b = id ? DB.bubbles.find(i => i.id === id) : null;
+            STATE.curBubbleId = id;
 
-    // 1. UI 反馈：按钮变身，但不阻塞关闭
-    const btn = document.querySelector('#bubbleModal .btn-secondary'); // 那个 AI 按钮
-    const oldText = btn.innerText;
-    btn.innerText = "⏳ 查找宇宙图书馆中...";
-    btn.disabled = true;
+            const modal = document.getElementById('bubbleModal');
+            const titleEl = document.getElementById('bubbleTitle');
+            const detailEl = document.getElementById('bubbleDetail');
 
-    // 2. 构造 Prompt
-    const prompt = `你是一个能保证知识准确的智能知识库。请对"${b.text}"进行深度拓展(直接输出内容，不要前言，字数300-2000字)：\n${b.detail || ''}`;
+            titleEl.value = b ? b.text : '';
+            detailEl.value = b ? b.detail : '';
 
-    // 3. 异步执行 (不 await，让它自己跑)
-    callAI(prompt).then(res => {
-        if (res) {
-            // 4. 写入数据 (直接追加到 detail，即可编辑区域)
-            // 如果原来有内容，换行追加；如果没有，直接填
-            const appendText = `\n\n[🤖 AI拓展]:\n${res}`;
-            b.detail = (b.detail || '') + appendText;
+            // [新增] 颜色回显
+            const curColor = b ? (b.color || '#BF5AF2') : '#BF5AF2'; // 默认紫
+            updateColorUI(curColor);
 
-            // 5. 如果当前弹窗还开着，实时更新 UI
-            if (STATE.curBubbleId === b.id && document.getElementById('bubbleModal').classList.contains('active')) {
-                document.getElementById('bubbleDetail').value = b.detail;
+            // 按钮状态
+            const btnRow = modal.querySelector('.btn-row');
+            if (id) {
+                // 编辑模式：显示 AI 按钮
+                btnRow.innerHTML = `
+                    <button class="btn btn-secondary" onclick="triggerBubbleExpand()">🤖 AI 续写</button>
+                    <button class="btn btn-primary" onclick="saveBubble()">保存</button>
+                `;
+            } else {
+                // 新增模式
+                btnRow.innerHTML = `<button class="btn btn-primary" style="width:100%" onclick="saveBubble()">创建</button>`;
             }
 
-            // 6. 保存
-            saveAll();
-            renderStage(); // 更新界面上的小绿点
-
-            // 7. 恢复按钮 (如果弹窗还在)
-            if(btn) {
-                btn.innerText = "✅ 已追加到内容";
-                setTimeout(() => { btn.innerText = oldText; btn.disabled = false; }, 2000);
-            }
-        } else {
-            if(btn) { btn.innerText = "❌ 失败"; btn.disabled = false; }
+            modal.classList.add('active');
         }
-    });
 
-    // 这里的函数直接结束，用户可以点 X 关闭弹窗，后台 callAI 还在跑
-}
+        // 2. [新增] 颜色选择逻辑
+        let tempColor = '#BF5AF2'; // 临时存颜色
+        function setBubbleColor(color) {
+            tempColor = color;
+            updateColorUI(color);
+        }
+        function updateColorUI(color) {
+            // 更新选中样式
+            document.querySelectorAll('.color-opt').forEach(el => {
+                // 简单的颜色匹配，实际可能需要更严谨的转换
+                if(el.style.backgroundColor.toUpperCase() === color.toUpperCase()) el.classList.add('active');
+                else el.classList.remove('active');
+            });
+            document.getElementById('customColorPicker').value = color;
+            document.getElementById('curColorVal').innerText = color;
+        }
+
+        // 3. [修改] 保存逻辑 (带颜色)
+        function saveBubble() {
+            const text = document.getElementById('bubbleTitle').value.trim();
+            const detail = document.getElementById('bubbleDetail').value;
+            if(!text) return alert('写点啥吧？');
+
+            if (STATE.curBubbleId) {
+                // 更新
+                const b = DB.bubbles.find(i => i.id === STATE.curBubbleId);
+                if(b) {
+                    b.text = text;
+                    b.detail = detail;
+                    b.color = tempColor; // [新增] 保存颜色
+                }
+            } else {
+                // 新增
+                DB.bubbles.push({
+                    id: Date.now(),
+                    date: STATE.selectedDate,
+                    text: text,
+                    detail: detail,
+                    color: tempColor, // [新增] 保存颜色
+                    ai: ''
+                });
+            }
+            saveAll();
+            renderStage();
+            closeModal('bubbleModal');
+        }
+
+        // 4. [核心修改] AI 内容直接内化 (无弹窗，直接追加)
+        async function triggerBubbleExpand() {
+            const b = DB.bubbles.find(i => i.id === STATE.curBubbleId);
+            if (!b) return;
+
+            const btn = document.querySelector('#bubbleModal .btn-secondary');
+            const oldText = btn.innerText;
+            btn.innerText = "⏳ 思考中...";
+            btn.disabled = true;
+
+            const prompt = `你是一个能保证知识准确的智能知识库。请对"${b.text}"进行深度拓展(直接输出内容，不要前言，字数300-2000字)：\n${b.detail || ''}`;
+
+            callAI(prompt).then(res => {
+                if (res) {
+                    // [关键] 直接追加到 detail，不弹窗，不搞虚的
+                    const appendText = `\n\n--- [AI 拓展] ---\n${res}`;
+
+                    // 1. 更新数据对象
+                    b.detail = (b.detail || '') + appendText;
+
+                    // 2. 如果当前还在编辑这个气泡，实时更新输入框
+                    if (STATE.curBubbleId === b.id && document.getElementById('bubbleModal').classList.contains('active')) {
+                        document.getElementById('bubbleDetail').value = b.detail;
+                    }
+
+                    saveAll();
+                    renderStage();
+
+                    if(btn) btn.innerText = "✅ 已追加";
+                } else {
+                    if(btn) btn.innerText = "❌ 失败";
+                }
+                setTimeout(() => { if(btn) { btn.innerText = oldText; btn.disabled = false; } }, 1500);
+            });
+        }
 
 
         // === 5. 日记 & 整理 ===
@@ -1314,6 +1404,7 @@ function getCurrentModel() {
     </script>
 </body>
 </html>
+
 
 
 
