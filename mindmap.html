@@ -722,23 +722,20 @@ async function triggerSplit() {
         btn.disabled = false;
     }
 }
-// === [核心修改] 真·AI 拓展 (同步主App) ===
+// === [核心修改] 真·AI 拓展 (内容内化版) ===
 async function triggerAIExpand() {
     if(!selectedNode) return;
     const btn = document.querySelector('.btn-ai');
     const oldTxt = btn.innerText;
 
-    // 1. 检查配置
     if (!apiConfig.key) return alert("请先去设置里填 API Key！");
 
-    btn.innerText = "🧠 思考中...";
+    btn.innerText = "🧠 写入中...";
     btn.disabled = true;
 
-    // 2. 准备 Prompt
     const prompt = `请对概念"${selectedNode.label}"进行深度百科式拓展(100-300字)，直接输出内容，不要废话。`;
 
     try {
-        // 3. 调用 API (复用之前的 fetch 逻辑，这里简化写)
         const response = await fetch(`${apiConfig.url}/chat/completions`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiConfig.key}` },
@@ -751,20 +748,20 @@ async function triggerAIExpand() {
         const data = await response.json();
         const content = data.choices[0].message.content;
 
-        // 4. 更新当前节点
-        selectedNode.ai = content;
-        // 同时把 AI 内容追加到 fullText (根据您的需求，两边互通)
-        // selectedNode.fullText += `\n\n[AI]: ${content}`;
+        // [关键] 内容内化：直接追加到 fullText
+        selectedNode.fullText += `\n\n--- [AI 拓展] ---\n${content}`;
+        selectedNode.ai = content; // 留个备份也行
 
-        // 5. 更新 UI
-        document.getElementById('aiResultBox').style.display = 'block';
-        document.getElementById('aiResultBox').innerText = content;
-        // document.getElementById('nodeDesc').innerText = selectedNode.fullText;
+        // 更新 UI：直接显示在正文区，不再需要那个 aiResultBox
+        document.getElementById('nodeDesc').innerText = selectedNode.fullText;
+        // 如果您想隐藏那个绿色的 ai-box，可以在 CSS 里把它 display:none，或者这里置空
+        document.getElementById('aiResultBox').style.display = 'none';
 
-        // 6. [关键] 同步回主 App 数据 (mb_bubbles)
+        // 同步并保存
         syncToMainApp('update', selectedNode);
+        saveAllData();
 
-        alert("AI 拓展已完成，并同步至主大脑！");
+        alert("AI 知识已注入大脑皮层！(已追加到节点内容)");
 
     } catch(e) {
         alert("AI 罢工了：" + e.message);
@@ -773,6 +770,7 @@ async function triggerAIExpand() {
         btn.disabled = false;
     }
 }
+
 
 
         function filterNodes(type, el) {
@@ -1028,6 +1026,7 @@ function syncToMainApp(action, node) {
     </script>
 </body>
 </html>
+
 
 
 
