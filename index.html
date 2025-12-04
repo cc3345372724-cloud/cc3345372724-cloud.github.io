@@ -458,36 +458,40 @@
     <div class="modal-overlay" id="bubbleModal">
         <div class="modal-card">
             <div class="modal-header"><span>💭 灵感详情</span><span class="close-icon" onclick="closeModal('bubbleModal')">×</span></div>
+
+
+            <div class="form-group">
+                <input type="text" id="bubbleTitle" class="form-input" placeholder="核心想法..." style="font-weight:bold; font-size:16px;">
+            </div>
+
             <textarea id="bubbleDetail" class="form-textarea" placeholder="详细描述..."></textarea>
 
-                   <div class="form-group" style="margin-bottom:15px;">
-                <label style="display:block; color:#666; font-size:12px; margin-bottom:5px;">气泡颜色</label>
+
+            <div class="btn-row" style="display:flex; gap:10px; margin-top:10px;">
+
+            </div>
+
+
+            <div class="form-group" style="margin-top:20px; margin-bottom:15px;">
+                <label style="display:block; color:#666; font-size:12px; margin-bottom:8px;">气泡颜色</label>
                 <div class="color-picker-row" style="display:flex; gap:10px; align-items:center;">
+                    <div class="color-opt" onclick="setBubbleColor('#FF453A')" style="background:#FF453A; width:28px; height:28px; border-radius:50%; cursor:pointer; border:2px solid transparent; transition:0.2s;"></div>
+                    <div class="color-opt" onclick="setBubbleColor('#0A84FF')" style="background:#0A84FF; width:28px; height:28px; border-radius:50%; cursor:pointer; border:2px solid transparent; transition:0.2s;"></div>
+                    <div class="color-opt" onclick="setBubbleColor('#FFD60A')" style="background:#FFD60A; width:28px; height:28px; border-radius:50%; cursor:pointer; border:2px solid transparent; transition:0.2s;"></div>
+                    <div class="color-opt" onclick="setBubbleColor('#30D158')" style="background:#30D158; width:28px; height:28px; border-radius:50%; cursor:pointer; border:2px solid transparent; transition:0.2s;"></div>
+                    <div class="color-opt" onclick="setBubbleColor('#BF5AF2')" style="background:#BF5AF2; width:28px; height:28px; border-radius:50%; cursor:pointer; border:2px solid transparent; transition:0.2s;"></div>
 
-                    <div class="color-opt" onclick="setBubbleColor('#FF453A')" style="background:#FF453A; width:24px; height:24px; border-radius:50%; cursor:pointer; border:2px solid transparent;"></div>
-                    <div class="color-opt" onclick="setBubbleColor('#0A84FF')" style="background:#0A84FF; width:24px; height:24px; border-radius:50%; cursor:pointer; border:2px solid transparent;"></div>
-                    <div class="color-opt" onclick="setBubbleColor('#FFD60A')" style="background:#FFD60A; width:24px; height:24px; border-radius:50%; cursor:pointer; border:2px solid transparent;"></div>
-                    <div class="color-opt" onclick="setBubbleColor('#30D158')" style="background:#30D158; width:24px; height:24px; border-radius:50%; cursor:pointer; border:2px solid transparent;"></div>
-                    <div class="color-opt" onclick="setBubbleColor('#BF5AF2')" style="background:#BF5AF2; width:24px; height:24px; border-radius:50%; cursor:pointer; border:2px solid transparent;"></div>
-
-                    <div style="position:relative; width:24px; height:24px; border-radius:50%; overflow:hidden; border:1px solid #555;">
+                    <div style="position:relative; width:28px; height:28px; border-radius:50%; overflow:hidden; border:1px solid rgba(255,255,255,0.3);">
                         <input type="color" id="customColorPicker" onchange="setBubbleColor(this.value)" style="position:absolute; top:-50%; left:-50%; width:200%; height:200%; cursor:pointer; padding:0; margin:0; border:none;">
                     </div>
-                    <span id="curColorVal" style="font-size:10px; color:#666; margin-left:auto;">#------</span>
+                    <span id="curColorVal" style="font-size:10px; color:#aaa; margin-left:auto; font-family:monospace;">#------</span>
                 </div>
             </div>
 
-
-            <div style="display:flex; gap:10px;">
-                <button class="btn-primary" onclick="saveBubble()">保存</button>
-                <button class="btn-primary btn-danger" onclick="deleteBubble()">删除</button>
-            </div>
-
-            <button class="btn-primary btn-secondary" onclick="triggerBubbleExpand()">🤖 AI 拓展</button>
             <div id="bubbleAiResult" class="ai-content-box"></div>
         </div>
     </div>
-     
+
     <!-- 4. 复习模式 -->
     <div class="modal-overlay" id="reviewModal">
         <div class="modal-card">
@@ -747,9 +751,16 @@
             list.forEach(b => {
                 const el = document.createElement('div');
                 el.className = `bubble ${b.ai ? 'has-ai' : ''}`;
+                // 优先使用气泡自带颜色，否则随机
                 el.style.borderColor = b.color || 'rgba(255,255,255,0.2)';
+                // [可选优化] 让背景也带一点微弱的颜色
+                el.style.boxShadow = `0 4px 15px ${b.color}20`; // 20是hex透明度
+
                 el.innerHTML = `<div class="ai-tag"></div><span>${b.text}</span>`;
-                el.onclick = () => openBubbleDetail(b.id);
+
+                // [修改] 这里必须调用 openBubbleModal 以支持颜色编辑
+                el.onclick = () => openBubbleModal(b.id);
+
                 stage.appendChild(el);
             });
         }
@@ -774,32 +785,11 @@
         }
 
         // === 4. 详情 & AI ===
-        function openBubbleDetail(id) {
-            STATE.curBubbleId = id;
-            const b = DB.bubbles.find(i => i.id === id);
-            document.getElementById('bubbleDetail').value = b.detail || b.text;
-            const res = document.getElementById('bubbleAiResult');
-            res.innerHTML = b.ai || '';
-            res.style.display = b.ai ? 'block' : 'none';
-            openModal('bubbleModal');
-        }
+                 // === 核心修复逻辑开始 ===
 
-        function saveBubble() {
-            const b = DB.bubbles.find(i => i.id === STATE.curBubbleId);
-            b.detail = document.getElementById('bubbleDetail').value;
-            saveAll();
-            closeModal('bubbleModal');
-        }
+        let tempColor = '#BF5AF2'; // 全局变量，用于暂存当前选中的颜色
 
-        function deleteBubble() {
-            if(!confirm('确定删除?')) return;
-            DB.bubbles = DB.bubbles.filter(i => i.id !== STATE.curBubbleId);
-            saveAll();
-            renderStage();
-            closeModal('bubbleModal');
-        }
-
-                // 1. [修改] 打开编辑框 (回显颜色)
+        // 1. 打开气泡编辑模态框
         function openBubbleModal(id) {
             const b = id ? DB.bubbles.find(i => i.id === id) : null;
             STATE.curBubbleId = id;
@@ -807,76 +797,115 @@
             const modal = document.getElementById('bubbleModal');
             const titleEl = document.getElementById('bubbleTitle');
             const detailEl = document.getElementById('bubbleDetail');
+            const aiResultEl = document.getElementById('bubbleAiResult');
 
+            // 回显数据
             titleEl.value = b ? b.text : '';
-            detailEl.value = b ? b.detail : '';
+            detailEl.value = b ? (b.detail || '') : '';
+            aiResultEl.style.display = 'none'; // 重置AI框
+            aiResultEl.innerHTML = '';
 
-            // [新增] 颜色回显
-            const curColor = b ? (b.color || '#BF5AF2') : '#BF5AF2'; // 默认紫
-            updateColorUI(curColor);
+            // [关键] 颜色回显与初始化
+            // 如果是编辑，用气泡颜色；如果是新建，用默认紫或随机
+            const initColor = b ? (b.color || '#BF5AF2') : UTILS.randColor();
+            setBubbleColor(initColor);
 
-            // 按钮状态
+            // 动态生成按钮组
             const btnRow = modal.querySelector('.btn-row');
             if (id) {
-                // 编辑模式：显示 AI 按钮
+                // 编辑模式
                 btnRow.innerHTML = `
-                    <button class="btn btn-secondary" onclick="triggerBubbleExpand()">🤖 AI 续写</button>
-                    <button class="btn btn-primary" onclick="saveBubble()">保存</button>
+                    <button class="btn-primary" style="flex:1" onclick="saveBubble()">保存修改</button>
+                    <button class="btn-primary btn-secondary" style="width:auto" onclick="triggerBubbleExpand()">🤖 AI</button>
+                    <button class="btn-primary btn-danger" style="width:auto" onclick="deleteBubble()">🗑️</button>
                 `;
             } else {
-                // 新增模式
-                btnRow.innerHTML = `<button class="btn btn-primary" style="width:100%" onclick="saveBubble()">创建</button>`;
+                // 新增模式 (虽然目前主要通过顶部输入框新增，但保留此逻辑以备扩展)
+                btnRow.innerHTML = `<button class="btn-primary" style="width:100%" onclick="saveBubble()">创建气泡</button>`;
             }
 
-            modal.classList.add('active');
+            openModal('bubbleModal');
         }
 
-        // 2. [新增] 颜色选择逻辑
-        let tempColor = '#BF5AF2'; // 临时存颜色
+        // 2. 颜色选择逻辑
         function setBubbleColor(color) {
-            tempColor = color;
-            updateColorUI(color);
-        }
-        function updateColorUI(color) {
-            // 更新选中样式
+            tempColor = color; // 更新全局变量
+
+            // 更新 UI 选中态
             document.querySelectorAll('.color-opt').forEach(el => {
-                // 简单的颜色匹配，实际可能需要更严谨的转换
-                if(el.style.backgroundColor.toUpperCase() === color.toUpperCase()) el.classList.add('active');
-                else el.classList.remove('active');
+                // 转换一下格式对比 (简单处理)
+                const elColor = el.style.backgroundColor; // 浏览器通常转为 rgb()
+                // 这里简单粗暴一点，点击谁谁亮，或者根据 hex 匹配
+                // 既然用户点击了，就直接重置所有 active，然后给当前的加 active 比较稳
+                el.classList.remove('active');
+                // 尝试匹配 (辅助视觉)
+                if(rgbToHex(elColor).toUpperCase() === color.toUpperCase()) el.classList.add('active');
             });
+
+            // 如果是在点击预设颜色球，给被点击的球加高亮（由于上面逻辑可能因为格式问题匹配不到，这里补充一个点击反馈）
+            if(event && event.target && event.target.classList.contains('color-opt')) {
+                document.querySelectorAll('.color-opt').forEach(e => e.classList.remove('active'));
+                event.target.classList.add('active');
+            }
+
             document.getElementById('customColorPicker').value = color;
             document.getElementById('curColorVal').innerText = color;
         }
 
-        // 3. [修改] 保存逻辑 (带颜色)
+        // 辅助：rgb转hex，防止浏览器自动转换导致颜色匹配失败
+        function rgbToHex(rgb) {
+            if(!rgb || rgb.indexOf('rgb') === -1) return rgb || '#000000';
+            const [r, g, b] = rgb.match(/\d+/g);
+            return "#" + ((1 << 24) + (+r << 16) + (+g << 8) + +b).toString(16).slice(1);
+        }
+
+        // 3. 保存逻辑 (修复了获取不到 title 的 bug)
         function saveBubble() {
-            const text = document.getElementById('bubbleTitle').value.trim();
-            const detail = document.getElementById('bubbleDetail').value;
-            if(!text) return alert('写点啥吧？');
+            const titleEl = document.getElementById('bubbleTitle');
+            const detailEl = document.getElementById('bubbleDetail');
+
+            const text = titleEl.value.trim();
+            const detail = detailEl.value;
+
+            if(!text) return alert('标题不能为空！');
 
             if (STATE.curBubbleId) {
-                // 更新
+                // 更新现有气泡
                 const b = DB.bubbles.find(i => i.id === STATE.curBubbleId);
                 if(b) {
                     b.text = text;
                     b.detail = detail;
-                    b.color = tempColor; // [新增] 保存颜色
+                    b.color = tempColor; // [关键] 保存选中的颜色
                 }
             } else {
-                // 新增
+                // 新增气泡 (预留接口)
                 DB.bubbles.push({
                     id: Date.now(),
-                    date: STATE.selectedDate,
+                    date: STATE.curDateStr,
                     text: text,
                     detail: detail,
-                    color: tempColor, // [新增] 保存颜色
+                    color: tempColor,
                     ai: ''
                 });
             }
+
             saveAll();
-            renderStage();
+            renderStage(); // 刷新界面，颜色会立即生效
+            renderCalendar(); // 刷新日历点
             closeModal('bubbleModal');
         }
+
+        // 4. 删除逻辑
+        function deleteBubble() {
+            if(!confirm('确定要删除这个灵感气泡吗?')) return;
+            DB.bubbles = DB.bubbles.filter(i => i.id !== STATE.curBubbleId);
+            saveAll();
+            renderStage();
+            renderCalendar();
+            closeModal('bubbleModal');
+        }
+
+        // === 核心修复逻辑结束 ===
 
         // 4. [核心修改] AI 内容直接内化 (无弹窗，直接追加)
         async function triggerBubbleExpand() {
@@ -1409,6 +1438,7 @@ function getCurrentModel() {
     </script>
 </body>
 </html>
+
 
 
 
