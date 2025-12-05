@@ -581,21 +581,21 @@
     <div class="bottom-dock">
         <div class="dock-row">
             <button class="dock-btn" onclick="openDiaryModal()">
-                📖 今日日记 <span id="moodDot" style="display:none; width:8px; height:8px; border-radius:50%; margin-left:5px;"></span>
+                📖 Dairy <span id="moodDot" style="display:none; width:8px; height:8px; border-radius:50%; margin-left:5px;"></span>
             </button>
             <button class="dock-btn highlight" onclick="triggerDailySummary()">
-                ✨ AI今日整理
+                😋👌
             </button>
             <button class="dock-btn" onclick="window.location.href='mindmap.html'">
-                🧠 脑图模式
+                🔥🥵
             </button>
 
             <button class="dock-btn" onclick="openModal('bgModal')">
-                🖼 换背景
+                🖼 Background
             </button>
             <!-- 添加到 dock-row 中，位于背景按钮之后 -->
             <button class="dock-btn" onclick="openModal('dataModal')">
-                💾 数据
+                💾 DATA
             </button>
         </div>
         <div class="input-row">
@@ -666,14 +666,14 @@
 
             <label class="form-label">COMMENT</label>
             <textarea id="diaryInput" class="form-textarea" placeholder="What happened..."></textarea>
-            <button class="btn-primary" onclick="saveDiary()">保存日记</button>
+            <button class="btn-primary" onclick="saveDiary()">Save</button>
         </div>
     </div>
 
     <!-- 3. 气泡详情 & 拓展 -->
     <div class="modal-overlay" id="bubbleModal">
         <div class="modal-card">
-            <div class="modal-header"><span>💭 灵感详情</span><span class="close-icon" onclick="closeModal('bubbleModal')">×</span></div>
+            <div class="modal-header"><span>💭 BULLSHIT</span><span class="close-icon" onclick="closeModal('bubbleModal')">×</span></div>
 
 
             <div class="form-group">
@@ -711,12 +711,12 @@
     <!-- 4. 复习模式 -->
     <div class="modal-overlay" id="reviewModal">
         <div class="modal-card">
-            <div class="modal-header"><span>🧠 知识复习</span><span class="close-icon" onclick="closeModal('reviewModal')">×</span></div>
+            <div class="modal-header"><span> 🥺please remember me</span><span class="close-icon" onclick="closeModal('reviewModal')">×</span></div>
 
             <div id="reviewSetup">
-                <label class="form-label">起始日期 (默认7天前)</label>
+                <label class="form-label">Start from (7 days ago)</label>
                 <input type="date" id="reviewStartDate" class="form-input">
-                <button class="btn-primary" onclick="startReview()">开始抽卡</button>
+                <button class="btn-primary" onclick="startReview()">START</button>
             </div>
 
             <div id="reviewPlay" style="display:none;">
@@ -733,7 +733,7 @@
     <!-- 5. 统计 -->
     <div class="modal-overlay" id="statsModal">
         <div class="modal-card">
-            <div class="modal-header"><span>📊 全局统计</span><span class="close-icon" onclick="closeModal('statsModal')">×</span></div>
+            <div class="modal-header"><span>🔥What had u done bro🔥</span><span class="close-icon" onclick="closeModal('statsModal')">×</span></div>
             <div class="stats-wrap">
                 <div class="pie-chart" id="pieChart"></div>
                 <div class="legend-box" id="legendBox"></div>
@@ -1077,8 +1077,8 @@
             if (id) {
                 // 编辑模式
                 btnRow.innerHTML = `
-                    <button class="btn-primary" style="flex:1" onclick="saveBubble()">保存修改</button>
-                    <button class="btn-primary btn-secondary" style="width:auto" onclick="triggerBubbleExpand()">🤖 AI</button>
+                    <button class="btn-primary" style="flex:1" onclick="saveBubble()">Save</button>
+                    <button class="btn-primary btn-secondary" style="width:auto" onclick="triggerBubbleExpand()">Expend</button>
                     <button class="btn-primary btn-danger" style="width:auto" onclick="deleteBubble()">🗑️</button>
                 `;
             } else {
@@ -1700,4 +1700,5 @@ function getCurrentModel() {
     </script>
 </body>
 </html>
+
 
