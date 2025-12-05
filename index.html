@@ -82,35 +82,46 @@
         .top-actions { display: flex; gap: 15px; }
 
         /* === 3. 日历条 (通透胶囊) === */
-        .calendar-strip-container {
-            flex-shrink: 0; padding: 10px 0;
-            background: rgba(255,255,255,0.01); /* 几乎透明 */
-        }
-        .calendar-strip {
-            display: flex; gap: 8px; padding: 0 15px; overflow-x: auto;
-            scrollbar-width: none;
-        }
-        .calendar-strip::-webkit-scrollbar { display: none; }
+        
+/* === 3. 日历条 (悬浮药丸) === */
+.calendar-strip-container {
+    flex-shrink: 0; padding: 15px 0 10px;
+    /* 去掉背景，让它悬浮 */
+    background: transparent;
+}
+.calendar-strip {
+    display: flex; gap: 12px; padding: 0 20px; overflow-x: auto;
+    scrollbar-width: none;
+    /* 增加底部内边距，防止阴影被切 */
+    padding-bottom: 10px;
+}
+.calendar-strip::-webkit-scrollbar { display: none; }
 
-        .day-pill {
-            flex: 0 0 46px; height: 62px; border-radius: 14px;
-            background: rgba(255,255,255,0.08); /* 半透明底 */
-            backdrop-filter: blur(10px);
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            font-size: 12px; border: 1px solid rgba(255,255,255,0.05);
-            transition: 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-            position: relative;
-            cursor: pointer;
-        }
-        .day-pill span:first-child { font-size: 10px; opacity: 0.6; margin-bottom: 2px; }
-        .day-pill span:last-child { font-size: 16px; font-weight: 600; }
+.day-pill {
+    flex: 0 0 50px; height: 70px;
+    border-radius: 25px; /* 更圆润 */
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    position: relative; cursor: pointer;
+}
+.day-pill span:first-child { font-size: 11px; color: var(--text-sub); margin-bottom: 4px; font-weight: 500; }
+.day-pill span:last-child { font-size: 19px; font-weight: 600; }
 
-        .day-pill.active {
-            background: #fff; color: #000;
-            box-shadow: 0 4px 20px rgba(255,255,255,0.3); /* 发光感 */
-            transform: translateY(-2px);
-        }
-        .day-pill.has-data { border-color: var(--accent-green); }
+/* 选中态：发光白 */
+.day-pill.active {
+    background: #fff; border-color: #fff;
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 0 8px 20px rgba(255,255,255,0.15);
+}
+.day-pill.active span:first-child, .day-pill.active span:last-child { color: #000; }
+
+.day-pill.has-data::after {
+    content: ''; position: absolute; bottom: 6px; width: 4px; height: 4px;
+    background: var(--accent-green); border-radius: 50%;
+}
 
         /* 心情标记 - 增加光晕 */
         .day-pill[data-mood="red"] { border-color: var(--mood-red); box-shadow: 0 0 10px rgba(255, 107, 107, 0.3) inset; }
@@ -313,19 +324,17 @@
         }
         .close-icon:hover { background: rgba(255,255,255,0.2); color: #fff; }
 
-        /* 心情选择器优化 */
-        .mood-selector {
-            background: rgba(255,255,255,0.05);
-            padding: 15px; border-radius: 20px;
-            display: flex; justify-content: space-around;
-            border: 1px solid rgba(255,255,255,0.05);
-        }
-        .mood-item {
-            width: 36px; height: 36px; opacity: 0.4;
-            transform: scale(0.9); transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-        }
-        .mood-item.selected { opacity: 1; transform: scale(1.25); box-shadow: 0 0 20px currentColor; }
+    /* 心情选择器 */
+    .mood-selector {
+        background: rgba(255,255,255,0.05); padding: 15px; border-radius: 20px;
+        display: flex; justify-content: space-between; gap: 10px;
+    }
+    .mood-item {
+        width: 44px; height: 44px; border-radius: 50%;
+        background: currentColor; opacity: 0.3; transform: scale(0.9);
+        transition: 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); cursor: pointer;
+    }
+    .mood-item.selected { opacity: 1; transform: scale(1.1); box-shadow: 0 0 20px currentColor; }
 
         /* 表单控件美化 */
         .form-group { margin-bottom: 15px; }
@@ -1523,6 +1532,7 @@ function getCurrentModel() {
     </script>
 </body>
 </html>
+
 
 
 
