@@ -206,48 +206,6 @@ body {
         .day-pill[data-mood="green"] { border-color: var(--mood-green); box-shadow: 0 0 8px rgba(78, 205, 196, 0.4); }
         .day-pill[data-mood="pink"] { border-color: var(--mood-pink); box-shadow: 0 0 8px rgba(255, 154, 158, 0.4); }
 
-        /* === 4. 待办事项区域 (Code 2 特色) === */
-        .todo-section {
-            flex-shrink: 0;
-            padding: 15px; margin: 10px 15px 5px;
-            background: rgba(40, 40, 40, 0.4); backdrop-filter: blur(25px);
-            border-radius: 18px; border: 1px solid rgba(255,255,255,0.1);
-            max-height: 160px; overflow-y: auto;
-            display: flex; flex-direction: column; gap: 8px;
-        }
-        .todo-header {
-            font-size: 13px; color: var(--text-sub); display: flex; justify-content: space-between;
-            margin-bottom: 5px; position: sticky; top: 0; z-index: 10;
-        }
-        .todo-item {
-            display: flex; align-items: center; gap: 10px;
-            padding: 8px 10px; background: rgba(255,255,255,0.05); border-radius: 10px;
-            transition: all 0.2s; animation: slideIn 0.3s;
-        }
-        .todo-checkbox {
-            width: 22px; height: 22px; border-radius: 6px; border: 2px solid var(--text-sub);
-            display: flex; align-items: center; justify-content: center; cursor: pointer;
-            transition: 0.2s; flex-shrink: 0;
-        }
-        .todo-checkbox.checked {
-            background: var(--accent-green); border-color: var(--accent-green);
-            animation: bounceCheck 0.4s;
-        }
-        .todo-checkbox.checked::after { content: '✓'; color: #fff; font-size: 14px; font-weight: bold; }
-
-        .todo-text {
-            flex: 1; font-size: 14px; outline: none; background: transparent; border: none;
-            color: #fff; font-family: inherit;
-        }
-        .todo-text.done { text-decoration: line-through; color: var(--text-sub); }
-
-        .add-todo-btn {
-            text-align: center; padding: 8px; font-size: 18px; color: var(--text-sub);
-            cursor: pointer; border-radius: 8px; background: rgba(255,255,255,0.02);
-            transition: 0.2s;
-        }
-        .add-todo-btn:hover { background: rgba(255,255,255,0.08); color: #fff; }
-
         /* === 6. 底部 Dock === */
         .bottom-dock {
             flex-shrink: 0; padding: 15px;
@@ -1513,6 +1471,7 @@ function getCurrentModel() {
     </script>
 </body>
 </html>
+
 
 
 
