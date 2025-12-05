@@ -12,92 +12,192 @@
     <link rel="apple-touch-icon" href="/79bb12d7b45f22e817a27c146a8b5571.png">
     <style>
         /* === 0. 核心变量与重置 === */
-        :root {
-            /* 视觉基调 */
-            --glass-bg: rgba(255, 255, 255, 0.08);
-            --glass-border: rgba(255, 255, 255, 0.15);
-            --glass-blur: 20px;
-            --text-main: rgba(255, 255, 255, 0.95);
-            --text-sub: rgba(255, 255, 255, 0.6);
+:root {
+    /* === 视觉基调：高级磨砂与深邃感 === */
+    --glass-bg: rgba(255, 255, 255, 0.08);       /* 核心：低透明度白 */
+    --glass-border: rgba(255, 255, 255, 0.12);   /* 极细的边框光感 */
+    --glass-blur: 25px;                          /* 强模糊，营造景深 */
+    --text-main: rgba(255, 255, 255, 0.95);      /* 主字色 */
+    --text-sub: rgba(255, 255, 255, 0.55);       /* 次级字色 */
 
-            /* 功能色 */
-            --accent-blue: #0A84FF; /* iOS Blue */
-            --accent-green: #30D158; /* iOS Green */
-            --accent-red: #FF453A;   /* iOS Red */
-            --card-bg: #1C1C1E;      /* iOS Dark Card */
+    /* === iOS 功能色 (保留但微调) === */
+    --accent-blue: #0A84FF;
+    --accent-green: #30D158;
+    --accent-red: #FF453A;
+    --card-bg: #1C1C1E; /* 纯色卡片底色，用于模态框 */
 
-            /* 渐变色 (来自 Code 1) */
-            --primary-gradient: linear-gradient(135deg, #00C9FF 0%, #92FE9D 100%);
+    /* === 渐变色 (用于按钮/高光) === */
+    --primary-gradient: linear-gradient(135deg, #0A84FF 0%, #5E5CE6 100%); /* 更蓝紫调，更深邃 */
 
-            /* 心情颜色 (来自 Code 2) */
-            --mood-red: #FF6B6B;
-            --mood-orange: #FFAA64;
-            --mood-yellow: #FFE66D;
-            --mood-green: #4ECDC4;
-            --mood-pink: #FF9A9E;
-        }
+    /* === 心情糖果色 (降低饱和度，增加荧光感) === */
+    --mood-red: #FF6B6B;
+    --mood-orange: #FF9F0A;
+    --mood-yellow: #FFD60A;
+    --mood-green: #32D74B;
+    --mood-pink: #BF5AF2;
+}
 
-        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
-            background-color: #000;
-            color: var(--text-main);
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden; /* 防止 iOS 橡皮筋效果影响整体布局 */
-        }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+    background-color: #000;
+    color: var(--text-main);
+    height: auto;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    /* 关键：给整个页面一个微妙的深色渐变底，防止纯黑太死 */
+    background: linear-gradient(to bottom, #000000, #1c1c1e);
+}
 
-        /* === 1. 动态背景层 === */
-        .bg-layer { position: fixed; inset: 0; background: linear-gradient(to bottom, #0f2027, #203a43, #2c5364); z-index: -2; }
-        .bg-image {
-            position: fixed; inset: 0; background-size: cover; background-position: center;
-            opacity: 0.4; z-index: -1; filter: blur(3px); transition: 0.5s;
-            /* 默认图 */
-            background-image: url('https://images.unsplash.com/photo-1518020382113-a7e8fc38eac9?q=80&w=2000&auto=format&fit=crop');
-        }
+/* === 1. 动态背景层 (星空/极光感) === */
+.bg-layer { position: fixed; inset: 0; z-index: -2; background: #000; }
+.bg-image {
+    position: fixed; inset: 0; background-size: cover; background-position: center;
+    opacity: 0.3; z-index: -1; filter: blur(30px); transition: opacity 0.5s;
+    /* 这里的图建议换成更抽象的流体或光斑 */
+    background-image: url('https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?q=80&w=2000&auto=format&fit=crop');
+}
 
-        /* === 2. 顶部导航栏 (Code 2 Style) === */
-        .top-bar {
-            flex-shrink: 0;
-            padding: 12px 20px;
-            background: rgba(0,0,0,0.3); backdrop-filter: blur(15px);
-            border-bottom: 0.5px solid var(--glass-border);
-            z-index: 100;
-            display: flex; justify-content: space-between; align-items: center;
-        }
-        .date-control { display: flex; align-items: center; gap: 15px; }
-        .date-title { font-size: 17px; font-weight: 600; }
-        .icon-btn {
-            background: none; border: none; color: var(--accent-blue); font-size: 18px;
-            cursor: pointer; padding: 5px; transition: transform 0.2s;
-        }
-        .icon-btn:hover { transform: scale(1.1); }
-        .top-actions { display: flex; gap: 15px; }
+/* === 2. 顶部导航栏 (全透明磨砂) === */
+.top-bar {
+    flex-shrink: 0;
+    padding: 14px 20px;
+    /* 核心：只给一点点白，全靠模糊 */
+    background: rgba(255, 255, 255, 0.01);
+    backdrop-filter: blur(var(--glass-blur));
+    border-bottom: 0.5px solid rgba(255,255,255,0.05);
+    z-index: 100;
+    display: flex; justify-content: space-between; align-items: center;
+}
+.date-control { display: flex; align-items: center; gap: 15px; }
+.date-title { font-size: 18px; font-weight: 700; letter-spacing: 0.3px; }
+.icon-btn {
+    background: none; border: none; color: var(--accent-blue); font-size: 20px;
+    cursor: pointer; padding: 8px; border-radius: 50%;
+    transition: all 0.2s;
+}
+.icon-btn:hover { background: rgba(255,255,255,0.1); }
+.top-actions { display: flex; gap: 10px; }
 
-        /* === 3. 日历条 === */
-        .calendar-strip-container {
-            flex-shrink: 0; padding: 10px 0;
-            background: rgba(255,255,255,0.02);
-        }
-        .calendar-strip {
-            display: flex; gap: 8px; padding: 0 15px; overflow-x: auto;
-            scrollbar-width: none;
-        }
-        .calendar-strip::-webkit-scrollbar { display: none; }
+/* === 3. 日历条 (悬浮药丸) === */
+.calendar-strip-container {
+    flex-shrink: 0; padding: 15px 0 10px;
+    /* 去掉背景，让它悬浮 */
+    background: transparent;
+}
+.calendar-strip {
+    display: flex; gap: 12px; padding: 0 20px; overflow-x: auto;
+    scrollbar-width: none;
+    /* 增加底部内边距，防止阴影被切 */
+    padding-bottom: 10px;
+}
+.calendar-strip::-webkit-scrollbar { display: none; }
 
-        .day-pill {
-            flex: 0 0 46px; height: 62px; border-radius: 14px; background: var(--glass-bg);
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            font-size: 12px; border: 1px solid transparent; transition: 0.2s; position: relative;
-            cursor: pointer;
-        }
-        .day-pill span:first-child { font-size: 10px; opacity: 0.6; margin-bottom: 2px; }
-        .day-pill span:last-child { font-size: 16px; font-weight: 600; }
+.day-pill {
+    flex: 0 0 50px; height: 70px;
+    border-radius: 25px; /* 更圆润 */
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    position: relative; cursor: pointer;
+}
+.day-pill span:first-child { font-size: 11px; color: var(--text-sub); margin-bottom: 4px; font-weight: 500; }
+.day-pill span:last-child { font-size: 19px; font-weight: 600; }
 
-        .day-pill.active { background: #fff; color: #000; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
-        .day-pill.has-data { border-color: var(--accent-green); }
+/* 选中态：发光白 */
+.day-pill.active {
+    background: #fff; border-color: #fff;
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 0 8px 20px rgba(255,255,255,0.15);
+}
+.day-pill.active span:first-child, .day-pill.active span:last-child { color: #000; }
+
+.day-pill.has-data::after {
+    content: ''; position: absolute; bottom: 6px; width: 4px; height: 4px;
+    background: var(--accent-green); border-radius: 50%;
+}
+
+/* 心情标记 (改为光晕) */
+.day-pill[data-mood="red"] { box-shadow: inset 0 0 15px rgba(255, 107, 107, 0.3); border-color: rgba(255, 107, 107, 0.5); }
+.day-pill[data-mood="orange"] { box-shadow: inset 0 0 15px rgba(255, 159, 10, 0.3); border-color: rgba(255, 159, 10, 0.5); }
+.day-pill[data-mood="yellow"] { box-shadow: inset 0 0 15px rgba(255, 214, 10, 0.3); border-color: rgba(255, 214, 10, 0.5); }
+.day-pill[data-mood="green"] { box-shadow: inset 0 0 15px rgba(50, 215, 75, 0.3); border-color: rgba(50, 215, 75, 0.5); }
+.day-pill[data-mood="pink"] { box-shadow: inset 0 0 15px rgba(191, 90, 242, 0.3); border-color: rgba(191, 90, 242, 0.5); }
+
+
+/* === 4. 待办事项 (半透明卡片) === */
+.todo-section {
+    flex-shrink: 0;
+    margin: 5px 20px 10px;
+    padding: 18px;
+    background: rgba(30, 30, 30, 0.4); /* 深色半透 */
+    backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
+    border-radius: 22px;
+    border: 1px solid rgba(255,255,255,0.08);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    max-height: 180px; overflow-y: auto;
+    display: flex; flex-direction: column; gap: 10px;
+}
+.todo-header {
+    font-size: 12px; text-transform: uppercase; letter-spacing: 1px;
+    color: var(--text-sub); font-weight: 600; margin-bottom: 5px;
+}
+.todo-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 12px;
+    background: rgba(255,255,255,0.03);
+    border-radius: 14px;
+    border: 1px solid transparent;
+    transition: all 0.2s;
+}
+.todo-item:active { background: rgba(255,255,255,0.06); transform: scale(0.99); }
+
+.todo-checkbox {
+    width: 20px; height: 20px; border-radius: 6px;
+    border: 2px solid rgba(255,255,255,0.3);
+    display: flex; align-items: center; justify-content: center;
+    transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.todo-checkbox.checked {
+    background: var(--accent-green); border-color: var(--accent-green);
+    transform: scale(1.1);
+}
+.todo-checkbox.checked::after { content: ''; width: 6px; height: 10px; border: solid #000; border-width: 0 2px 2px 0; transform: rotate(45deg) translate(-1px, -1px); }
+
+.todo-text {
+    flex: 1; font-size: 15px; background: transparent; border: none;
+    color: var(--text-main); font-family: inherit;
+}
+.todo-text.done { color: var(--text-sub); text-decoration: line-through; opacity: 0.6; }
+
+
+/* === 5. 主舞台 (漂浮气泡) === */
+.main-stage {
+    flex: 1; overflow-y: auto; overflow-x: hidden;
+    padding: 20px; position: relative;
+    display: flex; flex-wrap: wrap; align-content: flex-start; justify-content: center; gap: 18px;
+}
+.bubble {
+    border-radius: 50%; width: 95px; height: 95px;
+    /* 核心：极其通透的玻璃球质感 */
+    background: radial-gradient(120% 120% at 30% 30%, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.01) 100%);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,0.15);
+    /* 增加内发光，像玻璃 */
+    box-shadow: inset 0 0 15px rgba(255,255,255,0.05), 0 10px 20px rgba(0,0,0,0.1);
+    display: flex; align-items: center; justify-content: center;
+    text-align: center; padding: 12px;
+    font-size: 13px; font-weight: 500; letter-spacing: 0.3px;
+    animation: popIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    cursor: pointer; position: relative; transition: transform 0.2s;
+}
+.bubble:active { transform: scale(0.92); }
+/* 气泡文字稍微带点阴影，防止看不清 */
+.bubble span { text-shadow: 0 1px 3px rgba(0,0,0,0.3); display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
 
         /* 心情标记 */
         .day-pill[data-mood="red"] { border-color: var(--mood-red); box-shadow: 0 0 8px rgba(255, 107, 107, 0.4); }
@@ -147,31 +247,6 @@
             transition: 0.2s;
         }
         .add-todo-btn:hover { background: rgba(255,255,255,0.08); color: #fff; }
-
-        /* === 5. 主舞台 (气泡) === */
-        .main-stage {
-            flex: 1; overflow-y: auto; overflow-x: hidden;
-            padding: 20px; position: relative;
-            display: flex; flex-wrap: wrap; align-content: flex-start; justify-content: center; gap: 15px;
-        }
-        .bubble {
-            border-radius: 50%; width: 90px; height: 90px;
-            background: var(--glass-bg); backdrop-filter: blur(15px);
-            border: 1px solid rgba(255,255,255,0.2);
-            display: flex; align-items: center; justify-content: center;
-            text-align: center; padding: 10px; font-size: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1); animation: popIn 0.5s;
-            cursor: pointer; position: relative;
-        }
-        .bubble:active { transform: scale(0.95); }
-        .bubble span { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
-
-        .ai-tag {
-            position: absolute; top: 10px; right: 10px;
-            width: 8px; height: 8px; background: #92FE9D; border-radius: 50%;
-            box-shadow: 0 0 5px #92FE9D; display: none;
-        }
-        .bubble.has-ai .ai-tag { display: block; }
 
         /* === 6. 底部 Dock === */
         .bottom-dock {
@@ -1438,6 +1513,7 @@ function getCurrentModel() {
     </script>
 </body>
 </html>
+
 
 
 
