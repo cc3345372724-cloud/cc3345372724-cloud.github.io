@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -43,7 +44,7 @@
             font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
             background-color: #000;
             color: var(--text-main);
-            height: auto;
+            height: 100vh; /* 确保占满屏幕高度 */
             display: flex;
             flex-direction: column;
             overflow: hidden;
@@ -81,63 +82,58 @@
         .icon-btn:hover { transform: scale(1.1); }
         .top-actions { display: flex; gap: 15px; }
 
-        /* === 3. 日历条 (通透胶囊) === */
- /* === 3. 日历条 (高级悬浮药丸) === */
-.calendar-strip-container {
-    flex-shrink: 0; padding: 10px 0 15px;
-    background: transparent;
-}
-.calendar-strip {
-    display: flex; gap: 12px; padding: 0 20px; overflow-x: auto;
-    scrollbar-width: none;
-    padding-bottom: 20px; /* 留出阴影空间 */
-}
+        /* === 3. 日历条 (高级悬浮药丸) === */
+        .calendar-strip-container {
+            flex-shrink: 0; padding: 10px 0 15px;
+            background: transparent;
+        }
+        .calendar-strip {
+            display: flex; gap: 12px; padding: 0 20px; overflow-x: auto;
+            scrollbar-width: none;
+            padding-bottom: 20px; /* 留出阴影空间 */
+        }
 
-.day-pill {
-    flex: 0 0 52px; height: 72px;
-    border-radius: 26px; /* 更圆润，像鹅卵石 */
+        .day-pill {
+            flex: 0 0 52px; height: 72px;
+            border-radius: 26px; /* 更圆润，像鹅卵石 */
+            /* [核心美化] 极简通透感 */
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+            /* 边框极淡，几乎看不见，只留光感 */
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+            position: relative; cursor: pointer;
+            /* 默认状态下的微弱阴影 */
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        }
 
-    /* [核心美化] 极简通透感 */
-    background: rgba(255, 255, 255, 0.03);
-    backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+        .day-pill span:first-child {
+            font-size: 11px; color: rgba(255,255,255,0.4);
+            margin-bottom: 4px; font-weight: 500; letter-spacing: 0.5px;
+        }
+        .day-pill span:last-child {
+            font-size: 20px; font-weight: 600;
+            color: rgba(255,255,255,0.9);
+        }
 
-    /* 边框极淡，几乎看不见，只留光感 */
-    border: 1px solid rgba(255, 255, 255, 0.08);
+        /* 选中态：发光白玉质感 */
+        .day-pill.active {
+            background: #fff;
+            border-color: #fff;
+            transform: translateY(-4px) scale(1.02); /* 悬浮得更高 */
+            /* 强烈的辉光阴影 */
+            box-shadow: 0 12px 30px rgba(255,255,255,0.25);
+        }
+        .day-pill.active span:first-child { color: rgba(0,0,0,0.5); }
+        .day-pill.active span:last-child { color: #000; }
 
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
-    position: relative; cursor: pointer;
-
-    /* 默认状态下的微弱阴影 */
-    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-}
-
-.day-pill span:first-child {
-    font-size: 11px; color: rgba(255,255,255,0.4);
-    margin-bottom: 4px; font-weight: 500; letter-spacing: 0.5px;
-}
-.day-pill span:last-child {
-    font-size: 20px; font-weight: 600;
-    color: rgba(255,255,255,0.9);
-}
-
-/* 选中态：发光白玉质感 */
-.day-pill.active {
-    background: #fff;
-    border-color: #fff;
-    transform: translateY(-4px) scale(1.02); /* 悬浮得更高 */
-    /* 强烈的辉光阴影 */
-    box-shadow: 0 12px 30px rgba(255,255,255,0.25);
-}
-.day-pill.active span:first-child { color: rgba(0,0,0,0.5); }
-.day-pill.active span:last-child { color: #000; }
-
-/* 有数据的点 */
-.day-pill.has-data::after {
-    content: ''; position: absolute; bottom: 8px; width: 4px; height: 4px;
-    background: var(--accent-green); border-radius: 50%;
-    box-shadow: 0 0 5px var(--accent-green); /* 点也发光 */
-}
+        /* 有数据的点 */
+        .day-pill.has-data::after {
+            content: ''; position: absolute; bottom: 8px; width: 4px; height: 4px;
+            background: var(--accent-green); border-radius: 50%;
+            box-shadow: 0 0 5px var(--accent-green); /* 点也发光 */
+        }
 
         /* 心情标记 - 增加光晕 */
         .day-pill[data-mood="red"] { border-color: var(--mood-red); box-shadow: 0 0 10px rgba(255, 107, 107, 0.3) inset; }
@@ -229,21 +225,27 @@
         }
         .bubble.has-ai .ai-tag { display: block; }
 
-        /* === 6. 底部 Dock (极致磨砂) === */
-/* === 6. 底部 Dock (极致磨砂 & 位置修复) === */
-.bottom-dock {
-    flex-shrink: 0; padding: 15px;
-    /* 模仿 iOS 底部栏，确保固定在底部 */
-    background: rgba(20, 20, 20, 0.6);
-    backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px);
-    border-top: 0.5px solid rgba(255,255,255,0.1);
-    display: flex; flex-direction: column; gap: 12px;
-position: relative; /* 确保它在流布局中占位，不会被挤上去 */
-    z-index: 200;
-    padding-bottom: max(15px, env(safe-area-inset-bottom)); /* 完美适配全面屏 */
-}
-}
+        /* === 6. 底部 Dock (极致磨砂 & 位置修复) === */
+        .bottom-dock {
+            flex-shrink: 0; padding: 15px;
+            /* 模仿 iOS 底部栏，确保固定在底部 */
+            background: rgba(20, 20, 20, 0.6);
+            backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px);
+            border-top: 0.5px solid rgba(255,255,255,0.1);
+            display: flex; flex-direction: column; gap: 12px;
+            padding-bottom: max(15px, env(safe-area-inset-bottom)); /* 适配全面屏 */
+            z-index: 200;
+            /* 确保它不会被主舞台挤上去 - [关键] 使用 fixed 定位固定在底部 */
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+        }
 
+        /* 增加主舞台的下内边距，防止内容被固定的Dock遮挡 */
+        .main-stage {
+            padding-bottom: 160px; /* 预留给底栏的空间 */
+        }
 
         .dock-row {
             display: flex; gap: 10px; overflow-x: auto; padding-bottom: 2px;
@@ -266,88 +268,103 @@ position: relative; /* 确保它在流布局中占位，不会被挤上去 */
             box-shadow: 0 0 15px rgba(10, 132, 255, 0.2);
         }
 
-        /* [重要修正] 底部输入框样式复原 + 美化 */
-     /* 输入框行优化 */
-.input-row {
-    display: flex; gap: 12px; align-items: center; margin-top: 5px;
-    width: 100%; /* 占满宽度 */
-}
+        /* 输入框行优化 */
+        .input-row {
+            display: flex; gap: 12px; align-items: center; margin-top: 5px;
+            width: 100%; /* 占满宽度 */
+        }
 
-#mainInput {
-    flex: 1; height: 50px; padding: 0 20px;
-    border-radius: 25px;
-    border: 1px solid rgba(255,255,255,0.1); /* 边框调淡 */
-    /* 更细腻的磨砂输入框 */
-    background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-    color: #fff; font-size: 16px; outline: none;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1); /* 阴影柔和化 */
-    transition: all 0.2s;
-}
-#mainInput:focus {
-    border-color: var(--accent-blue);
-    background: rgba(40,40,40,0.6); /* 聚焦时加深背景，提升可读性 */
-    box-shadow: 0 0 0 4px rgba(10, 132, 255, 0.15);
-}
+        #mainInput {
+            flex: 1; height: 50px; padding: 0 20px;
+            border-radius: 25px;
+            border: 1px solid rgba(255,255,255,0.1); /* 边框调淡 */
+            /* 更细腻的磨砂输入框 */
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            color: #fff; font-size: 16px; outline: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1); /* 阴影柔和化 */
+            transition: all 0.2s;
+        }
+        #mainInput:focus {
+            border-color: var(--accent-blue);
+            background: rgba(40,40,40,0.6); /* 聚焦时加深背景，提升可读性 */
+            box-shadow: 0 0 0 4px rgba(10, 132, 255, 0.15);
+        }
 
-
+        /* [核心修改] 发送按钮：图片+动画 */
         #sendBtn {
             width: 50px; height: 50px; border-radius: 50%; border: none;
-            background: var(--accent-blue);
-            background: var(--primary-gradient); /* 保持渐变更好看 */
-            color: #fff; font-size: 20px;
-            box-shadow: 0 4px 12px rgba(10, 132, 255, 0.4);
-            transition: transform 0.2s;
-            display: flex; justify-content: center; align-items: center;
+            /* 去除原背景，改用图片 */
+            background: transparent;
+            background-size: cover;
+            background-position: center;
+            /* 默认第一张图作为兜底 */
+            background-image: url('https://img.baidu.re/i/2025/12/lyrps9.png');
+
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.2); /* 柔和发光 */
+            cursor: pointer;
+            transition: transform 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.2s;
+            /* 弹性动画关键帧 */
         }
-        #sendBtn:active { transform: scale(0.9); }
+        #sendBtn:active {
+            transform: scale(0.85);
+        }
+        /* 点击时的弹性类 */
+        .pop-anim {
+            animation: popBtn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes popBtn {
+            0% { transform: scale(0.9); }
+            50% { transform: scale(1.15); }
+            100% { transform: scale(1); }
+        }
 
 
-/* === 7. 模态框 (双端适配优化) === */
-.modal-overlay {
-    position: fixed; inset: 0;
-    background: rgba(0,0,0,0.4); /* 遮罩稍微加深一点点 */
-    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-    z-index: 1000;
-    display: none;
-    align-items: flex-end; /* 手机端默认：底部对齐 */
-    opacity: 0; transition: 0.3s;
-}
-.modal-overlay.active { display: flex; opacity: 1; }
+        /* === 7. 模态框 (双端适配优化) === */
+        .modal-overlay {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.4); /* 遮罩稍微加深一点点 */
+            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            z-index: 1000;
+            display: none;
+            align-items: flex-end; /* 手机端默认：底部对齐 */
+            opacity: 0; transition: 0.3s;
+        }
+        .modal-overlay.active { display: flex; opacity: 1; }
 
-.modal-card {
-    width: 100%; max-width: 100%;
-    max-height: auto; /* 防止太高溢出 */
-    border-radius: 24px 24px 0 0; /* 手机端：上圆角 */
-    /* [核心] 统一的高级磨砂材质 */
-    background: rgba(30, 30, 32, 0.85); /* 稍微不透明一点，防背景干扰 */
-    backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px);
-    padding: 24px 24px 40px;
-    transform: translateY(100%); /* 手机端动画：从下往上 */
-    transition: 0.4s cubic-bezier(0.19, 1, 0.22, 1);
-    border-top: 1px solid rgba(255,255,255,0.1);
-    box-shadow: 0 -10px 40px rgba(0,0,0,0.4);
-    overflow-y: auto;
-}
+        .modal-card {
+            width: 100%; max-width: 100%;
+            max-height: 80vh; /* 防止太高溢出，适配底部Dock */
+            border-radius: 24px 24px 0 0; /* 手机端：上圆角 */
+            /* [核心] 统一的高级磨砂材质 */
+            background: rgba(30, 30, 32, 0.85); /* 稍微不透明一点，防背景干扰 */
+            backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px);
+            padding: 24px 24px 40px;
+            transform: translateY(100%); /* 手机端动画：从下往上 */
+            transition: 0.4s cubic-bezier(0.19, 1, 0.22, 1);
+            border-top: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 -10px 40px rgba(0,0,0,0.4);
+            overflow-y: auto;
+        }
 
-/* 电脑端/平板端 适配 */
-@media (min-width: 600px) {
-    .modal-overlay {
-        align-items: center; justify-content: center; /* 电脑端：居中 */
-    }
-    .modal-card {
-        width: 90%; max-width: 480px;
-        border-radius: 24px; /* 电脑端：全圆角 */
-        transform: scale(0.95); opacity: 0; /* 电脑端动画：缩放淡入 */
-        box-shadow: 0 20px 50px rgba(0,0,0,0.5);
-        border: 1px solid rgba(255,255,255,0.1); /* 全边框 */
-    }
-    .modal-overlay.active .modal-card {
-        transform: scale(1); opacity: 1;
-    }
-}
-/* 手机端激活状态 */
-.modal-overlay.active .modal-card { transform: translateY(0); }
+        /* 电脑端/平板端 适配 */
+        @media (min-width: 600px) {
+            .modal-overlay {
+                align-items: center; justify-content: center; /* 电脑端：居中 */
+            }
+            .modal-card {
+                width: 90%; max-width: 480px;
+                border-radius: 24px; /* 电脑端：全圆角 */
+                transform: scale(0.95); opacity: 0; /* 电脑端动画：缩放淡入 */
+                box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+                border: 1px solid rgba(255,255,255,0.1); /* 全边框 */
+            }
+            .modal-overlay.active .modal-card {
+                transform: scale(1); opacity: 1;
+            }
+        }
+        /* 手机端激活状态 */
+        .modal-overlay.active .modal-card { transform: translateY(0); }
 
         .modal-header {
             font-size: 18px; font-weight: 700; margin-bottom: 20px;
@@ -363,17 +380,17 @@ position: relative; /* 确保它在流布局中占位，不会被挤上去 */
         }
         .close-icon:hover { background: rgba(255,255,255,0.2); color: #fff; }
 
-    /* 心情选择器 */
-    .mood-selector {
-        background: rgba(255,255,255,0.05); padding: 15px; border-radius: 20px;
-        display: flex; justify-content: space-between; gap: 10px;
-    }
-    .mood-item {
-        width: 44px; height: 44px; border-radius: 50%;
-        background: currentColor; opacity: 0.3; transform: scale(0.9);
-        transition: 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); cursor: pointer;
-    }
-    .mood-item.selected { opacity: 1; transform: scale(1.1); box-shadow: 0 0 20px currentColor; }
+        /* 心情选择器 */
+        .mood-selector {
+            background: rgba(255,255,255,0.05); padding: 15px; border-radius: 20px;
+            display: flex; justify-content: space-between; gap: 10px;
+        }
+        .mood-item {
+            width: 44px; height: 44px; border-radius: 50%;
+            background: currentColor; opacity: 0.3; transform: scale(0.9);
+            transition: 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); cursor: pointer;
+        }
+        .mood-item.selected { opacity: 1; transform: scale(1.1); box-shadow: 0 0 20px currentColor; }
 
         /* 表单控件美化 */
         .form-group { margin-bottom: 15px; }
@@ -452,30 +469,6 @@ position: relative; /* 确保它在流布局中占位，不会被挤上去 */
         #modelList::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
         .model-item:hover { background: rgba(255,255,255,0.1) !important; }
         .model-item.selected { background: rgba(10, 132, 255, 0.25) !important; border-color: var(--accent-blue) !important; }
-        /* === 补充：按钮弹性动画 === */
-@keyframes bounceBtn {
-    0% { transform: scale(1); }
-    40% { transform: scale(0.8); }
-    100% { transform: scale(1); }
-}
-
-/* 确保发送按钮样式覆盖 */
-#sendBtn {
-    /* 基础样式保持不变 */
-    width: 50px; height: 50px; border-radius: 50%; border: none;
-    /* 移除之前的渐变，改用图片背景 */
-    background-image: url('https://img.baidu.re/i/2025/12/lyrps9.png'); /* 默认初始图 */
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-
-    color: transparent; /* 隐藏原本的箭头文字 */
-    box-shadow: 0 4px 12px rgba(10, 132, 255, 0.4);
-    transition: transform 0.1s; /* 极短的按压反馈 */
-    display: flex; justify-content: center; align-items: center;
-    cursor: pointer;
-}
-#sendBtn:active { transform: scale(0.9); }
 
     </style>
 
@@ -542,7 +535,8 @@ position: relative; /* 确保它在流布局中占位，不会被挤上去 */
         </div>
         <div class="input-row">
             <input type="text" id="mainInput" placeholder="New idea..." autocomplete="off">
-            <button id="sendBtn" onclick="addBubble()">↑</button>
+            <!-- 修改发送按钮，去除 ↑ 符号，因为有图片背景了 -->
+            <button id="sendBtn" onclick="handleAddBubble()"></button>
         </div>
     </div>
 
@@ -700,28 +694,28 @@ position: relative; /* 确保它在流布局中占位，不会被挤上去 */
 <div class="modal-overlay" id="dataModal">
     <div class="modal-card">
         <div class="modal-header"><span>💾 数据管理</span><span class="close-icon" onclick="closeModal('dataModal')">×</span></div>
-        
+
         <div style="display: flex; flex-direction: column; gap: 12px;">
             <!-- 导出数据 -->
             <button class="btn-primary" onclick="exportData()">
                 📤 导出全部数据
             </button>
-            
+
             <!-- 导入数据 -->
             <div style="position: relative;">
                 <button class="btn-primary btn-secondary" onclick="document.getElementById('importFile').click()">
                     📥 导入数据文件
                 </button>
-                <input type="file" id="importFile" accept=".json" 
+                <input type="file" id="importFile" accept=".json"
                        style="position: absolute; opacity: 0; width: 1px; height: 1px;"
                        onchange="importData(event)">
             </div>
-            
+
             <!-- 数据清除 -->
             <button class="btn-primary btn-danger" onclick="confirmClearData()">
                 🗑️ 清除全部数据
             </button>
-            
+
             <!-- 数据信息 -->
             <div style="margin-top: 20px; padding: 12px; background: rgba(255,255,255,0.05); border-radius: 12px;">
                 <div style="font-size: 12px; color: var(--text-sub);">数据统计</div>
@@ -764,7 +758,20 @@ position: relative; /* 确保它在流布局中占位，不会被挤上去 */
             curDateStr: '',       // 当前视图日期字符串 'YYYY-MM-DD'
             curBubbleId: null,
             reviewQueue: [],
-            reviewIdx: 0
+            reviewIdx: 0,
+            // [新增] 按钮图片列表
+            btnImages: [
+                "https://img.baidu.re/i/2025/12/lyrps9.png",
+                "https://img.baidu.re/i/2025/12/lyrsei.png",
+                "https://img.baidu.re/i/2025/12/lys4qt.png",
+                "https://img.baidu.re/i/2025/12/lyshcv.png",
+                "https://img.baidu.re/i/2025/12/lysrdq.png",
+                "https://img.baidu.re/i/2025/12/lyswm0.png",
+                "https://img.baidu.re/i/2025/12/lyt3eh.png",
+                "https://img.baidu.re/i/2025/12/lytars.png",
+                "https://img.baidu.re/i/2025/12/lytlcj.png"
+            ],
+            lastImgIdx: -1
         };
 
         const UTILS = {
@@ -791,10 +798,43 @@ position: relative; /* 确保它在流布局中占位，不会被挤上去 */
             });
 
             // 绑定输入回车
-            document.getElementById('mainInput').addEventListener('keypress', e => e.key==='Enter' && addBubble());
+            document.getElementById('mainInput').addEventListener('keypress', e => e.key==='Enter' && handleAddBubble());
+
+            // [新增] 初始化按钮背景
+            updateBtnImage();
 
             updateDateState(new Date()); // 默认今天
         };
+
+        // [新增] 切换按钮背景逻辑
+        function updateBtnImage() {
+            let nextIdx;
+            // 确保不重复
+            do {
+                nextIdx = Math.floor(Math.random() * STATE.btnImages.length);
+            } while (nextIdx === STATE.lastImgIdx && STATE.btnImages.length > 1);
+
+            STATE.lastImgIdx = nextIdx;
+            document.getElementById('sendBtn').style.backgroundImage = `url('${STATE.btnImages[nextIdx]}')`;
+        }
+
+        // [新增] 处理点击发送（动画+换图+发送）
+        function handleAddBubble() {
+            const btn = document.getElementById('sendBtn');
+
+            // 1. 播放动画
+            btn.classList.remove('pop-anim');
+            void btn.offsetWidth; // 触发重绘
+            btn.classList.add('pop-anim');
+
+            // 2. 换图
+            setTimeout(() => {
+                updateBtnImage();
+            }, 100); // 稍微延迟一点点，让视觉更自然
+
+            // 3. 执行原有发送逻辑
+            addBubble();
+        }
 
         function updateDateState(date) {
             STATE.viewDate = date;
@@ -1215,7 +1255,7 @@ position: relative; /* 确保它在流布局中占位，不会被挤上去 */
             document.getElementById('reviewPlay').style.display = 'block';
             showCard();
         }
-        
+
 function showCard() {
     if(STATE.reviewIdx >= STATE.reviewQueue.length) {
         alert('复习完成！');
@@ -1225,7 +1265,7 @@ function showCard() {
     document.getElementById('cardDate').innerText = item.date;
     document.getElementById('cardFront').innerText = item.text;
     document.getElementById('cardBack').style.display = 'none';
-    
+
     // 修改这行：优先显示detail字段，如果没有则显示ai，都没有则显示无内容
     const backText = item.detail || item.ai || '(无内容)';
     document.getElementById('cardBack').innerText = backText;
@@ -1352,7 +1392,7 @@ function updateDataStats() {
         diaries: Object.keys(DB.diaries).length,
         dates: [...new Set(DB.bubbles.map(b => b.date))].length
     };
-    
+
     document.getElementById('dataStats').innerHTML = `
         <div>📝 bubble: ${stats.bubbles} 个</div>
         <div>✓ todo: ${stats.todos} 条</div>
@@ -1372,40 +1412,40 @@ function exportData() {
         stats: DB.stats,
         config: DB.config
     };
-    
+
     // 创建JSON文件
     const dataStr = JSON.stringify(exportData, null, 2);
     const dataBlob = new Blob([dataStr], {type: 'application/json'});
-    
+
     // 创建下载链接
     const url = URL.createObjectURL(dataBlob);
     const link = document.createElement('a');
     link.href = url;
     link.download = `mind-bubbles-backup-${new Date().toISOString().split('T')[0]}.json`;
-    
+
     // 触发下载
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-    
+
     alert('数据导出成功！');
 }
 
 function importData(event) {
     const file = event.target.files[0];
     if (!file) return;
-    
+
     const reader = new FileReader();
     reader.onload = function(e) {
         try {
             const importedData = JSON.parse(e.target.result);
-            
+
             // 验证数据格式
             if (!importedData.bubbles || !importedData.todos || !importedData.diaries) {
                 throw new Error('无效的数据文件格式');
             }
-            
+
             if (confirm(`是否导入数据？\n\n包含：\n• ${importedData.bubbles.length} 个Bubble\n• ${Object.values(importedData.todos).flat().length} 条待办\n• ${Object.keys(importedData.diaries).length} 天日记\n\n注意：这将覆盖现有数据！`)) {
                 // 覆盖数据
                 DB.bubbles = importedData.bubbles;
@@ -1413,21 +1453,21 @@ function importData(event) {
                 DB.diaries = importedData.diaries;
                 DB.stats = importedData.stats || { categories: {} };
                 DB.config = importedData.config || DB.config;
-                
+
                 // 保存到localStorage
                 saveAll();
-                
+
                 // 重新加载页面以应用新数据
                 location.reload();
             }
         } catch (error) {
             alert('导入失败：' + error.message);
         }
-        
+
         // 重置文件输入
         event.target.value = '';
     };
-    
+
     reader.readAsText(file);
 }
 
@@ -1442,26 +1482,26 @@ function clearAllData() {
     localStorage.removeItem('mb_todos');
     localStorage.removeItem('mb_diaries');
     localStorage.removeItem('mb_stats');
-    
+
     // 重置内存中的数据
     DB.bubbles = [];
     DB.todos = {};
     DB.diaries = {};
     DB.stats = { categories: {} };
-    
+
     // 保存空数据
     saveAll();
-    
+
     // 关闭弹窗
     closeModal('confirmClearModal');
-    
+
     // 重新加载页面
     setTimeout(() => {
         alert('数据已清除！页面将重新加载。');
         location.reload();
     }, 500);
 }
-        
+
         // === 9. 模型列表功能 ===
 async function fetchModels() {
     const baseUrl = document.getElementById('cfgUrl').value.trim().replace(/\/$/, '');
@@ -1586,74 +1626,6 @@ function displayModels(models) {
     });
 }
 
-        // === 脚本注入：放在原有的 <script> 标签最后 ===
-
-// [功能] 随机图片发送按钮逻辑
-(function() {
-    const btnImages = [
-        'https://img.baidu.re/i/2025/12/lyrps9.png',
-        'https://img.baidu.re/i/2025/12/lyrsei.png',
-        'https://img.baidu.re/i/2025/12/lys4qt.png',
-        'https://img.baidu.re/i/2025/12/lyshcv.png',
-        'https://img.baidu.re/i/2025/12/lysrdq.png',
-        'https://img.baidu.re/i/2025/12/lyswm0.png',
-        'https://img.baidu.re/i/2025/12/lyt3eh.png',
-        'https://img.baidu.re/i/2025/12/lytars.png',
-        'https://img.baidu.re/i/2025/12/lytlcj.png'
-    ];
-
-    let lastImgIndex = -1;
-
-    function getRandomImage() {
-        if (btnImages.length === 0) return '';
-        if (btnImages.length === 1) return btnImages[0];
-
-        let newIndex;
-        do {
-            newIndex = Math.floor(Math.random() * btnImages.length);
-        } while (newIndex === lastImgIndex);
-
-        lastImgIndex = newIndex;
-        return btnImages[newIndex];
-    }
-
-    // 初始化按钮图片
-    const sendBtn = document.getElementById('sendBtn');
-    if(sendBtn) {
-        // 预加载图片，防止点击时闪烁
-        btnImages.forEach(src => {
-            const img = new Image();
-            img.src = src;
-        });
-
-        // 绑定新的点击事件，保留原有功能
-        // 注意：原有的 onclick 已经在HTML中定义为 addBubble()
-        // 我们需要劫持它，或者在 addBubble 内部调用切换
-        // 这里采用劫持方式更安全，不修改原函数
-        const originalOnClick = sendBtn.onclick;
-
-        sendBtn.onclick = function(e) {
-            // 1. 先执行原有发送逻辑
-            if (typeof originalOnClick === 'function') {
-                originalOnClick.call(this, e);
-            } else if (window.addBubble) {
-                window.addBubble();
-            }
-
-            // 2. 切换图片 & 播放动画
-            // 只有当输入框不为空时才切换（或者你希望每次点都切换？按你的描述是“每次点击”）
-            // 既然是“每次点击都会随机切换”，那就无条件执行
-            const nextImg = getRandomImage();
-            this.style.backgroundImage = `url('${nextImg}')`;
-
-            // 触发重绘以播放动画
-            this.style.animation = 'none';
-            void this.offsetHeight; // 强制回流
-            this.style.animation = 'bounceBtn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
-        };
-    }
-})();
-
 // === 10. 修改callAI函数，使用配置的模型 ===
 // 原来的callAI函数已经使用DB.config.model，不需要修改
 // 但可以添加一个获取当前模型的小函数
@@ -1663,18 +1635,3 @@ function getCurrentModel() {
     </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
