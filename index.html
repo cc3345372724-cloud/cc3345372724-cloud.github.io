@@ -591,7 +591,7 @@
             </button>
 
             <button class="dock-btn" onclick="openModal('bgModal')">
-                🖼 Background
+                🖼 
             </button>
             <!-- 添加到 dock-row 中，位于背景按钮之后 -->
             <button class="dock-btn" onclick="openModal('dataModal')">
@@ -711,7 +711,7 @@
     <!-- 4. 复习模式 -->
     <div class="modal-overlay" id="reviewModal">
         <div class="modal-card">
-            <div class="modal-header"><span> 🥺please remember me</span><span class="close-icon" onclick="closeModal('reviewModal')">×</span></div>
+            <div class="modal-header"><span> 🥺PLEASE remember ME🥺</span><span class="close-icon" onclick="closeModal('reviewModal')">×</span></div>
 
             <div id="reviewSetup">
                 <label class="form-label">Start from (7 days ago)</label>
@@ -733,7 +733,7 @@
     <!-- 5. 统计 -->
     <div class="modal-overlay" id="statsModal">
         <div class="modal-card">
-            <div class="modal-header"><span>🔥What had u done bro🔥</span><span class="close-icon" onclick="closeModal('statsModal')">×</span></div>
+            <div class="modal-header"><span>🔥What did u PUT in the WATER🔥</span><span class="close-icon" onclick="closeModal('statsModal')">×</span></div>
             <div class="stats-wrap">
                 <div class="pie-chart" id="pieChart"></div>
                 <div class="legend-box" id="legendBox"></div>
@@ -996,7 +996,7 @@
             if(t.done && t.text) {
                 DB.bubbles.push({
                     id: Date.now(), date: STATE.curDateStr,
-                    text: `✅ 完成: ${t.text}`, ai: '', color: '#30D158'
+                    text: ` ${t.text}`, ai: '', color: '#30D158'
                 });
                 renderStage();
             }
@@ -1159,7 +1159,7 @@
 
         // 4. 删除逻辑
         function deleteBubble() {
-            if(!confirm('确定要删除这个灵感气泡吗?')) return;
+            if(!confirm('Sure to deleted the BUBBLE?')) return;
             DB.bubbles = DB.bubbles.filter(i => i.id !== STATE.curBubbleId);
             saveAll();
             renderStage();
@@ -1220,7 +1220,7 @@
             const aiBox = document.getElementById('aiSummaryRef');
             if(d.aiSummary) {
                 aiBox.style.display = 'block';
-                aiBox.innerText = "今日干了啥？: " + d.aiSummary;
+                aiBox.innerText = "一句话吐槽: " + d.aiSummary;
             } else {
                 aiBox.style.display = 'none';
             }
@@ -1248,7 +1248,7 @@
 
         async function triggerDailySummary() {
             const list = DB.bubbles.filter(b => b.date === STATE.curDateStr);
-            if(list.length === 0) return alert('今天还没有气泡哦');
+            if(list.length === 0) return alert('Neayh~no bubble today');
 
             const btn = document.querySelector('.dock-btn.highlight');
             const oldTxt = btn.innerText;
@@ -1700,5 +1700,6 @@ function getCurrentModel() {
     </script>
 </body>
 </html>
+
 
 
