@@ -238,10 +238,10 @@
     backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px);
     border-top: 0.5px solid rgba(255,255,255,0.1);
     display: flex; flex-direction: column; gap: 12px;
-    padding-bottom: max(15px, env(safe-area-inset-bottom)); /* 适配全面屏 */
+position: relative; /* 确保它在流布局中占位，不会被挤上去 */
     z-index: 200;
-    /* 确保它不会被主舞台挤上去 */
-    position: relative;
+    padding-bottom: max(15px, env(safe-area-inset-bottom)); /* 完美适配全面屏 */
+}
 }
 
 
@@ -452,6 +452,31 @@
         #modelList::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
         .model-item:hover { background: rgba(255,255,255,0.1) !important; }
         .model-item.selected { background: rgba(10, 132, 255, 0.25) !important; border-color: var(--accent-blue) !important; }
+        /* === 补充：按钮弹性动画 === */
+@keyframes bounceBtn {
+    0% { transform: scale(1); }
+    40% { transform: scale(0.8); }
+    100% { transform: scale(1); }
+}
+
+/* 确保发送按钮样式覆盖 */
+#sendBtn {
+    /* 基础样式保持不变 */
+    width: 50px; height: 50px; border-radius: 50%; border: none;
+    background-color: var(--accent-blue); /* 兜底色 */
+    /* 移除之前的渐变，改用图片背景 */
+    background-image: url('https://img.baidu.re/i/2025/12/lyrps9.png'); /* 默认初始图 */
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+
+    color: transparent; /* 隐藏原本的箭头文字 */
+    box-shadow: 0 4px 12px rgba(10, 132, 255, 0.4);
+    transition: transform 0.1s; /* 极短的按压反馈 */
+    display: flex; justify-content: center; align-items: center;
+    cursor: pointer;
+}
+#sendBtn:active { transform: scale(0.9); }
 
     </style>
 
@@ -1562,6 +1587,74 @@ function displayModels(models) {
     });
 }
 
+        // === 脚本注入：放在原有的 <script> 标签最后 ===
+
+// [功能] 随机图片发送按钮逻辑
+(function() {
+    const btnImages = [
+        'https://img.baidu.re/i/2025/12/lyrps9.png',
+        'https://img.baidu.re/i/2025/12/lyrsei.png',
+        'https://img.baidu.re/i/2025/12/lys4qt.png',
+        'https://img.baidu.re/i/2025/12/lyshcv.png',
+        'https://img.baidu.re/i/2025/12/lysrdq.png',
+        'https://img.baidu.re/i/2025/12/lyswm0.png',
+        'https://img.baidu.re/i/2025/12/lyt3eh.png',
+        'https://img.baidu.re/i/2025/12/lytars.png',
+        'https://img.baidu.re/i/2025/12/lytlcj.png'
+    ];
+
+    let lastImgIndex = -1;
+
+    function getRandomImage() {
+        if (btnImages.length === 0) return '';
+        if (btnImages.length === 1) return btnImages[0];
+
+        let newIndex;
+        do {
+            newIndex = Math.floor(Math.random() * btnImages.length);
+        } while (newIndex === lastImgIndex);
+
+        lastImgIndex = newIndex;
+        return btnImages[newIndex];
+    }
+
+    // 初始化按钮图片
+    const sendBtn = document.getElementById('sendBtn');
+    if(sendBtn) {
+        // 预加载图片，防止点击时闪烁
+        btnImages.forEach(src => {
+            const img = new Image();
+            img.src = src;
+        });
+
+        // 绑定新的点击事件，保留原有功能
+        // 注意：原有的 onclick 已经在HTML中定义为 addBubble()
+        // 我们需要劫持它，或者在 addBubble 内部调用切换
+        // 这里采用劫持方式更安全，不修改原函数
+        const originalOnClick = sendBtn.onclick;
+
+        sendBtn.onclick = function(e) {
+            // 1. 先执行原有发送逻辑
+            if (typeof originalOnClick === 'function') {
+                originalOnClick.call(this, e);
+            } else if (window.addBubble) {
+                window.addBubble();
+            }
+
+            // 2. 切换图片 & 播放动画
+            // 只有当输入框不为空时才切换（或者你希望每次点都切换？按你的描述是“每次点击”）
+            // 既然是“每次点击都会随机切换”，那就无条件执行
+            const nextImg = getRandomImage();
+            this.style.backgroundImage = `url('${nextImg}')`;
+
+            // 触发重绘以播放动画
+            this.style.animation = 'none';
+            void this.offsetHeight; // 强制回流
+            this.style.animation = 'bounceBtn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+        };
+    }
+})();
+
 // === 10. 修改callAI函数，使用配置的模型 ===
 // 原来的callAI函数已经使用DB.config.model，不需要修改
 // 但可以添加一个获取当前模型的小函数
@@ -1571,6 +1664,7 @@ function getCurrentModel() {
     </script>
 </body>
 </html>
+
 
 
 
