@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>NeuroLink OS - Mind Map Ultimate</title>
+    <title>NeuroLink OS - Mind Map Ultimate v4.0</title>
 
     <!-- === 0. 全屏模式适配 (iOS WebClip) === -->
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -13,7 +13,7 @@
     <style>
         /* === 1. 核心变量 (视觉基调) === */
         :root {
-            --glass-bg: rgba(20, 20, 30, 0.85);
+            --glass-bg: rgba(20, 20, 30, 0.65); /* 更通透 */
             --glass-border: rgba(255, 255, 255, 0.1);
             --accent-blue: #0A84FF;
             --accent-green: #30D158;
@@ -133,7 +133,7 @@
         .dock-item.active { opacity: 1; transform: scale(1.1); }
         .dock-icon { font-size: 18px; margin-bottom: 2px; }
 
-        /* 节点详情面板 (默认隐藏) */
+        /* [核心修复] 节点详情面板 - 手机端滑动优化 */
         .node-info {
             background: rgba(20, 20, 30, 0.95); border: 1px solid rgba(255, 255, 255, 0.1);
             padding: 20px; border-radius: 16px;
@@ -142,29 +142,36 @@
             display: none; margin-bottom: 10px;
             transform: translateY(20px); opacity: 0; transition: all 0.3s;
             z-index: 20;
-            /* [新增] 手机端最大高度限制 */
-            max-height: 60vh;
+            /* [新增] 限制最大高度，留出空间 */
+            max-height: 50vh;
             display: flex; flex-direction: column;
         }
         .node-info.show { transform: translateY(0); opacity: 1; display: flex; }
 
-        .node-title { font-size: 18px; font-weight: bold; margin-bottom: 8px; color: #fff; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+        .node-title {
+            font-size: 18px; font-weight: bold; margin-bottom: 8px; color: #fff;
+            display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;
+        }
 
         .node-tag {
             font-size: 10px; padding: 2px 6px; border-radius: 4px; border: 1px solid #fff;
             align-self: center; cursor: pointer; user-select: none;
         }
 
-        /* [修复] 详情可滑动，限制高度 */
+        /* [核心修复] 详情内容区 - 允许滚动 & 触摸优化 */
         .node-desc {
             font-size: 13px; color: #aaa; margin-bottom: 15px; line-height: 1.5;
-            /* 关键修改：让内容区占据剩余空间并滚动 */
+            /* 关键：允许内容溢出滚动 */
             flex: 1;
             overflow-y: auto;
             white-space: pre-wrap;
-            /* 增加触摸滚动的顺滑度 */
+            /* [关键] iOS 惯性滚动 */
             -webkit-overflow-scrolling: touch;
-            min-height: 100px;
+            /* [关键] 允许触摸事件，防止被 Canvas 拦截 */
+            touch-action: pan-y;
+            pointer-events: auto;
+
+            min-height: 100px; /* 保证有点击区域 */
         }
 
         /* 编辑状态样式 */
@@ -173,8 +180,6 @@
             transition: 0.2s; outline: none;
         }
         .editable:focus { border-bottom: 1px solid #00ffcc; background: rgba(255,255,255,0.05); }
-
-        /* [已删除] .ai-box 样式已被移除，因为内容合并了 */
 
         /* 按钮组 */
         .btn-group { display: flex; gap: 10px; flex-shrink: 0; }
@@ -243,7 +248,7 @@
                     <div class="type-panel" id="typePanel">
                         <button class="add-type-btn" onclick="addNewType()">+ 新增类目</button>
                     </div>
-                    <div style="font-size: 10px; color: #555; text-align: right;">NeuroLink v3.2</div>
+                    <div style="font-size: 10px; color: #555; text-align: right;">NeuroLink v4.0</div>
                 </div>
             </div>
 
@@ -257,7 +262,7 @@
                         <span id="nodeTitle" class="editable" contenteditable="true" onblur="saveNodeData()">节点名称</span>
                         <span id="nodeTag" class="node-tag" onclick="cycleNodeType()">TAG</span>
                     </div>
-                    <!-- 描述区域 (含内容+AI拓展) -->
+                    <!-- 描述区域 -->
                     <div class="node-desc editable" id="nodeDesc" contenteditable="true" onblur="saveNodeData()">内容...</div>
 
                     <!-- 按钮组 -->
@@ -269,23 +274,9 @@
                     </div>
                 </div>
 
-                <!-- 筛选栏 -->
-                <div class="filter-dock">
-                    <div class="dock-item active" onclick="filterNodes('all', this)">
-                        <span class="dock-icon" style="color:#fff">◉</span><span>全部</span>
-                    </div>
-                    <div class="dock-item" onclick="filterNodes('language', this)">
-                        <span class="dock-icon" style="color:var(--accent-green)">●</span><span>语言</span>
-                    </div>
-                    <div class="dock-item" onclick="filterNodes('science', this)">
-                        <span class="dock-icon" style="color:var(--accent-blue)">●</span><span>理科</span>
-                    </div>
-                    <div class="dock-item" onclick="filterNodes('entertainment', this)">
-                        <span class="dock-icon" style="color:var(--accent-red)">●</span><span>娱乐</span>
-                    </div>
-                    <div class="dock-item" onclick="filterNodes('misc', this)">
-                        <span class="dock-icon" style="color:var(--accent-purple)">●</span><span>杂项</span>
-                    </div>
+                <!-- 筛选栏 (根据配置动态生成) -->
+                <div class="filter-dock" id="filterDock">
+                    <!-- 动态注入 -->
                 </div>
             </div>
         </div>
@@ -322,22 +313,19 @@
     </div>
 
     <script>
-        // === 1. 核心配置 ===
+        // === 1. 核心配置与初始化 ===
         const CONFIG = {
-            colors: {
-                'language': '#30D158',
-                'science': '#0A84FF',
-                'entertainment': '#FF453A',
-                'misc': '#BF5AF2',
-                'custom': '#FFD60A'
-            },
-            types: [
-                { id: 'language', name: '语言学', color: '#30D158' },
-                { id: 'science', name: '理科/技术', color: '#0A84FF' },
-                { id: 'entertainment', name: '娱乐/赛车', color: '#FF453A' },
-                { id: 'misc', name: '杂项/记忆', color: '#BF5AF2' }
+            // 默认类型配置
+            defaultTypes: [
+                { id: 'language', name: '语言学', color: '#30D158', keywords: ['语言','英语','日文','单词','语法','speak'] },
+                { id: 'science', name: '理科/技术', color: '#0A84FF', keywords: ['数学','物理','代码','js','算法','logic'] },
+                { id: 'entertainment', name: '娱乐/赛车', color: '#FF453A', keywords: ['游戏','电影','赛车','f1','玩','fun'] },
+                { id: 'misc', name: '杂项/记忆', color: '#BF5AF2', keywords: [] }
             ]
         };
+
+        // 读取用户自定义的类型配置，如果没有则使用默认
+        let userTypes = JSON.parse(localStorage.getItem('nl_types') || JSON.stringify(CONFIG.defaultTypes));
 
         const canvas = document.getElementById('neuroCanvas');
         const ctx = canvas.getContext('2d');
@@ -351,17 +339,19 @@
         let filterType = 'all';
         let initialDistance = 0, initialScale = 1;
 
-        // API 配置
+        // [新增] 详情阈值，当 scale > 该值时显示详情
+        const DETAIL_THRESHOLD = 1.3;
+
         let apiConfig = {
             url: localStorage.getItem('nl_api_url') || 'https://api.openai.com/v1',
             key: localStorage.getItem('nl_api_key') || '',
             model: localStorage.getItem('nl_api_model') || 'gpt-3.5-turbo'
         };
 
-        // === 2. 初始化 ===
         function init() {
             resize();
             loadData();
+            renderFilterDock();
             renderTypePanel();
             animate();
             window.addEventListener('resize', resize);
@@ -374,79 +364,89 @@
             canvas.height = height;
         }
 
-        // === 3. 数据加载 (融合逻辑) ===
+        // === 2. 数据加载 (核心重构：双向同步+保留分类) ===
         function loadData() {
             nodes = []; links = [];
-
-            // 尝试读取两份数据源
-            const rawMapData = localStorage.getItem('neuro_map_data');
-            const rawAppData = localStorage.getItem('mb_bubbles');
+            const rawMapData = localStorage.getItem('neuro_map_data'); // 存位置、特定分类
+            const rawAppData = localStorage.getItem('mb_bubbles');     // 存内容、时间
 
             let mapNodes = rawMapData ? JSON.parse(rawMapData) : [];
             let appNodes = rawAppData ? JSON.parse(rawAppData) : [];
 
-            // 使用 Map 数据结构进行合并
             const nodeMap = new Map();
 
-            // 1. 先载入 App 数据 (保证内容最新)
+            // 1. 处理 App 数据
             appNodes.forEach(b => {
-                const type = detectType(b.text);
+                // 默认检测类型
+                const autoType = detectType(b.text);
+
                 nodeMap.set(b.id, {
                     id: b.id,
-                    // 位置：如果 Map 中没有则随机
                     x: (Math.random() - 0.5) * 600,
                     y: (Math.random() - 0.5) * 600,
                     r: 15 + Math.min(b.text.length, 10),
-                    color: b.color || CONFIG.colors[type] || '#BF5AF2',
-                    label: b.text.length > 8 ? b.text.substring(0, 8) + '...' : b.text,
+                    // [修复] 优先使用 App 里的 color (因为可能是用户手动选的)
+                    color: b.color || getColorByType(autoType),
+                    label: b.text, // [修复] 暂时存完整标题，渲染时再截断
                     fullText: b.text,
-                    // [重点] 将 detail 和 ai 合并到 desc，并去除旧的 AI 气泡逻辑
-                    desc: (b.detail || '') + (b.ai ? `\n\n--- [AI 拓展] ---\n${b.ai}` : ''),
-                    type: type,
+                    desc: (b.detail ? `[笔记]: ${b.detail}\n` : '') + (b.ai ? `\n[AI]: ${b.ai}` : ''),
+                    type: autoType, // 初始自动分类
                     ai: b.ai || '',
                     vx: 0, vy: 0,
                     source: 'app'
                 });
             });
 
-            // 2. 用 Map 数据覆盖位置 (如果有)
+            // 2. 融合 Map 数据 (位置 & 用户修正后的分类)
             mapNodes.forEach(n => {
                 if (nodeMap.has(n.id)) {
                     const existing = nodeMap.get(n.id);
                     existing.x = n.x;
                     existing.y = n.y;
+
+                    // [关键] 如果 Map 里存了类型，说明用户可能改过，优先用 Map 的类型
+                    // 但颜色还是以 App 为准 (因为 Bubble 那边也能改色)
+                    // 为了同步，我们认为 Bubble 的 color 属性是最终视觉属性
+                    if (n.type) existing.type = n.type;
                 } else {
-                    // 如果 App 里没了但 Map 里有，保留以防万一
-                    n.source = 'map';
-                    nodeMap.set(n.id, n);
+                     n.source = 'map';
+                     nodeMap.set(n.id, n);
                 }
             });
 
             nodes = Array.from(nodeMap.values());
-            if (nodes.length === 0) generateDemoNodes(10);
+            if (nodes.length === 0) generateDemoNodes(5);
             rebuildLinks();
         }
 
         function detectType(text) {
             const t = text.toLowerCase();
-            if (/语言|英语|日文|单词|语法|speak/i.test(t)) return 'language';
-            if (/数学|物理|代码|js|算法|logic/i.test(t)) return 'science';
-            if (/游戏|电影|赛车|f1|玩|fun/i.test(t)) return 'entertainment';
-            return 'misc';
+            // 遍历所有用户定义的类型，匹配关键词
+            for (const typeObj of userTypes) {
+                if (typeObj.keywords && typeObj.keywords.some(k => t.includes(k))) {
+                    return typeObj.id;
+                }
+            }
+            return 'misc'; // 默认杂项
+        }
+
+        function getColorByType(typeId) {
+            const t = userTypes.find(x => x.id === typeId);
+            return t ? t.color : '#BF5AF2';
         }
 
         function generateDemoNodes(count) {
             for (let i = 0; i < count; i++) {
-                const typeObj = CONFIG.types[Math.floor(Math.random() * CONFIG.types.length)];
+                const typeObj = userTypes[Math.floor(Math.random() * userTypes.length)];
                 nodes.push({
                     id: Date.now() + i,
-                    x: (Math.random() - 0.5) * 800,
-                    y: (Math.random() - 0.5) * 800,
-                    r: 15 + Math.random() * 10,
+                    x: (Math.random() - 0.5) * 400,
+                    y: (Math.random() - 0.5) * 400,
+                    r: 25,
                     color: typeObj.color,
-                    label: `示例_${i}`,
-                    fullText: `测试节点 #${i}`,
-                    desc: `点击联想试试看...`,
+                    label: `示例节点_${i}`,
+                    fullText: `这是一个测试节点 #${i}`,
+                    desc: `放大看看细节...`,
                     type: typeObj.id,
                     ai: '', vx: 0, vy: 0
                 });
@@ -464,20 +464,16 @@
             });
         }
 
-        // === 4. 动画渲染 ===
+        // === 3. 渲染循环 (含微观放大 LOD) ===
         function animate() {
-            // 背景清理（为了透出 body 的网格背景，这里用半透明黑）
             ctx.clearRect(0, 0, width, height);
-            // 如果不想透视，可以用 ctx.fillStyle = '#050508'; ctx.fillRect...
-            // 但为了赛博朋克风，我们保留 CSS 背景
-
             ctx.save();
             ctx.translate(width/2 + offsetX, height/2 + offsetY);
             ctx.scale(scale, scale);
 
             const visibleNodes = nodes.filter(n => filterType === 'all' || n.type === filterType);
 
-            // 绘制连线
+            // 线条
             ctx.globalCompositeOperation = 'screen';
             ctx.lineWidth = 1.5 / scale;
             links.forEach(link => {
@@ -486,48 +482,91 @@
                 grad.addColorStop(0, link.source.color);
                 grad.addColorStop(1, link.target.color);
                 ctx.strokeStyle = grad;
-                ctx.globalAlpha = 0.2; // 稍微亮一点
+                ctx.globalAlpha = 0.2;
                 ctx.beginPath();
                 ctx.moveTo(link.source.x, link.source.y);
                 ctx.lineTo(link.target.x, link.target.y);
                 ctx.stroke();
             });
 
-            // 绘制节点
+            // 节点
             ctx.globalCompositeOperation = 'source-over';
-            ctx.globalAlpha = 1;
             visibleNodes.forEach(node => {
-                // 呼吸微动
-                node.x += Math.sin(Date.now()*0.001 + node.id)*0.2;
-                node.y += Math.cos(Date.now()*0.001 + node.id)*0.2;
-                const breathe = Math.sin(Date.now() * 0.003 + node.id) * 3;
+                ctx.globalAlpha = 1;
 
-                // 光晕
-                if (scale > 0.4) {
-                    const grad = ctx.createRadialGradient(node.x, node.y, node.r*0.5, node.x, node.y, node.r*2 + breathe);
-                    grad.addColorStop(0, node.color);
-                    grad.addColorStop(1, 'rgba(0,0,0,0)');
-                    ctx.fillStyle = grad;
-                    ctx.beginPath(); ctx.arc(node.x, node.y, node.r*2 + breathe, 0, Math.PI*2); ctx.fill();
-                }
-
-                // 实体
+                // 1. 基础圆圈
                 ctx.fillStyle = node.color;
                 ctx.beginPath(); ctx.arc(node.x, node.y, node.r, 0, Math.PI*2); ctx.fill();
 
-                // 选中高亮
+                // 选中态
                 if (node === selectedNode) {
                     ctx.strokeStyle = '#fff';
                     ctx.lineWidth = 3 / scale;
                     ctx.stroke();
                 }
 
-                // 文字
-                if (scale > 0.6 || node === selectedNode) {
-                    ctx.fillStyle = '#fff';
-                    ctx.textAlign = 'center';
-                    ctx.font = `${12/scale}px Courier New`;
-                    ctx.fillText(node.label, node.x, node.y + node.r + 15/scale);
+                // 2. 文字处理 (LOD 核心)
+                ctx.fillStyle = '#fff';
+                ctx.textAlign = 'center';
+
+                // [修复] 标题完整显示：使用动态计算
+                // 如果 scale 比较小，显示简略；比较大，显示多一点；很大，显示全部
+                let fontSize = 12 / scale;
+                // 限制最小字号，防止太小看不清
+                if (fontSize < 4) fontSize = 4;
+                ctx.font = `${fontSize}px Courier New`;
+
+                // [新增] 标题处理：如果缩放够大，尝试显示更多，并自动换行
+                if (scale > 0.6) {
+                    const maxWidth = node.r * 2.5;
+                    const lineHeight = fontSize * 1.2;
+                    const words = node.label.split('');
+                    let line = '';
+                    let y = node.y + node.r + lineHeight;
+
+                    // 简单换行逻辑
+                    for(let n = 0; n < words.length; n++) {
+                        const testLine = line + words[n];
+                        const metrics = ctx.measureText(testLine);
+                        if (metrics.width > maxWidth && n > 0) {
+                            ctx.fillText(line, node.x, y);
+                            line = words[n];
+                            y += lineHeight;
+                        } else {
+                            line = testLine;
+                        }
+                    }
+                    ctx.fillText(line, node.x, y);
+                }
+
+                // 3. [新增] 微观细节 (LOD Detail)
+                // 当放大倍数超过阈值，在节点旁边显示详细内容框
+                if (scale > DETAIL_THRESHOLD) {
+                    const detailW = 120 / scale; // 框宽度随缩放反向调整，保持视觉大小适中
+                    const detailH = 80 / scale;
+                    const dx = node.x + node.r + 10/scale;
+                    const dy = node.y - detailH/2;
+
+                    // 玻璃背景框
+                    ctx.fillStyle = 'rgba(20, 20, 30, 0.8)';
+                    ctx.strokeStyle = node.color;
+                    ctx.lineWidth = 1 / scale;
+                    ctx.beginPath();
+                    ctx.roundRect(dx, dy, detailW, detailH, 5/scale);
+                    ctx.fill();
+                    ctx.stroke();
+
+                    // 内容文字
+                    ctx.fillStyle = '#ccc';
+                    ctx.textAlign = 'left';
+                    ctx.font = `${8/scale}px Courier New`;
+
+                    // 简单截取前几行
+                    const contentLines = node.desc.split('\n').slice(0, 5);
+                    contentLines.forEach((line, idx) => {
+                        if (line.length > 15) line = line.substring(0, 15) + '...';
+                        ctx.fillText(line, dx + 5/scale, dy + 10/scale + (idx * 10/scale));
+                    });
                 }
             });
 
@@ -535,7 +574,7 @@
             requestAnimationFrame(animate);
         }
 
-        // === 5. 交互 (拖拽与点击) ===
+        // === 4. 交互逻辑 (保持优化) ===
         container.addEventListener('mousedown', startDrag);
         container.addEventListener('touchstart', e => {
             if(e.touches.length === 2) {
@@ -546,21 +585,28 @@
         });
         container.addEventListener('mousemove', moveDrag);
         container.addEventListener('touchmove', e => {
+            // [关键] 防止画布滚动干扰详情页滚动
+            // 如果点在详情页上，不阻止默认行为
+            if (e.target.closest('.node-info')) return;
             e.preventDefault();
             if(e.touches.length === 2) {
                 const dist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
-                scale = Math.min(Math.max(0.2, initialScale * (dist / initialDistance)), 5);
+                scale = Math.min(Math.max(0.2, initialScale * (dist / initialDistance)), 10); // [修改] 允许放大到10倍以便观察微观
             } else if(isDragging) moveDrag(e.touches[0]);
         });
         container.addEventListener('mouseup', endDrag);
         container.addEventListener('touchend', endDrag);
         container.addEventListener('wheel', e => {
+            if (e.target.closest('.node-info')) return; // 防止详情页滚动触发缩放
             e.preventDefault();
             scale += e.deltaY * -0.001;
-            scale = Math.min(Math.max(0.2, scale), 5);
+            scale = Math.min(Math.max(0.2, scale), 10);
         }, {passive:false});
 
         function startDrag(e) {
+            // 排除UI层点击
+            if (e.target.closest('.ui-layer') && !e.target.classList.contains('ui-layer')) return;
+
             isDragging = true; lastX = e.clientX; lastY = e.clientY;
             const wx = (e.clientX - width/2 - offsetX) / scale;
             const wy = (e.clientY - height/2 - offsetY) / scale;
@@ -574,9 +620,8 @@
                 }
             }
             if(!hit) {
-                // 点击空白处，如果面板打开则关闭
-                // 但要判断是否在拖拽，这里简化处理：稍微移动就不算点击
-                // 暂时不处理点击空白关闭，防止误触
+                 // 点击空白是否关闭详情页？
+                 // 为了防止误触，这里不自动关闭，需点X
             }
         }
         function moveDrag(e) {
@@ -590,10 +635,7 @@
             selectedNode = node;
             const p = document.getElementById('nodeInfoPanel');
             document.getElementById('nodeTitle').innerText = node.label;
-
-            // [修改] 显示合并后的内容
             document.getElementById('nodeDesc').innerText = node.desc || node.fullText;
-
             updateTagUI(node);
             p.classList.add('show');
         }
@@ -601,171 +643,152 @@
         function closeNodePanel() {
             selectedNode = null;
             document.getElementById('nodeInfoPanel').classList.remove('show');
-            document.getElementById('nodeTitle').blur();
-            document.getElementById('nodeDesc').blur();
         }
 
-        // === 6. 功能逻辑 ===
+        // === 5. 高级分类管理 (用户自定义 + 关键词提取) ===
 
-        function saveNodeData() {
-            if(!selectedNode) return;
-            selectedNode.label = document.getElementById('nodeTitle').innerText;
-            // 注意：这里我们只保存文本到 desc，不区分 ai 字段了
-            selectedNode.desc = document.getElementById('nodeDesc').innerText;
-            selectedNode.fullText = selectedNode.desc.split('\n--- [AI 拓展] ---')[0]; // 尝试分离正文
-            syncToMainApp('update', selectedNode);
+        function renderFilterDock() {
+            const dock = document.getElementById('filterDock');
+            dock.innerHTML = `
+                <div class="dock-item active" onclick="filterNodes('all', this)">
+                    <span class="dock-icon" style="color:#fff">◉</span><span>全部</span>
+                </div>
+            `;
+            userTypes.forEach(t => {
+                dock.innerHTML += `
+                    <div class="dock-item" onclick="filterNodes('${t.id}', this)">
+                        <span class="dock-icon" style="color:${t.color}">●</span><span>${t.name}</span>
+                    </div>
+                `;
+            });
+        }
+
+        function renderTypePanel() {
+            const p = document.getElementById('typePanel');
+            // 保留新增按钮
+            const addBtn = p.querySelector('.add-type-btn');
+            p.innerHTML = '';
+
+            userTypes.forEach((t, idx) => {
+                const div = document.createElement('div');
+                div.className = 'type-item';
+                div.innerHTML = `
+                    <div class="type-info">
+                        <div class="color-dot" style="background:${t.color}"></div>
+                        <span>${t.name}</span>
+                    </div>
+                    <span class="del-type-btn" onclick="removeType(${idx})">×</span>
+                `;
+                p.appendChild(div);
+            });
+            p.appendChild(addBtn);
+        }
+
+        function addNewType() {
+            const name = prompt("输入新分类名称:");
+            if(!name) return;
+            const kwStr = prompt("输入自动分类关键词(用逗号分隔):", "例如: 学习,笔记");
+            const kws = kwStr ? kwStr.split(/[,，]/).map(s=>s.trim()) : [];
+            const color = ['#FFD60A', '#30D158', '#0A84FF', '#FF453A', '#BF5AF2'][Math.floor(Math.random()*5)];
+
+            userTypes.push({
+                id: 'type_' + Date.now(),
+                name: name,
+                color: color,
+                keywords: kws
+            });
+
+            saveTypes();
+            renderFilterDock();
+            renderTypePanel();
+            // 重新计算分类
+            reCalcAllTypes();
+        }
+
+        function removeType(idx) {
+            if(confirm("确定删除该分类？")) {
+                userTypes.splice(idx, 1);
+                saveTypes();
+                renderFilterDock();
+                renderTypePanel();
+                reCalcAllTypes();
+            }
+        }
+
+        function saveTypes() {
+            localStorage.setItem('nl_types', JSON.stringify(userTypes));
+        }
+
+        // [新增] 重新计算所有节点的分类（当规则改变时）
+        function reCalcAllTypes() {
+            nodes.forEach(n => {
+                // 只有当来源是 App 且用户没手动强制改过(Map里没存type)时才重算
+                // 这里简单处理：全部重算一遍默认类型
+                n.type = detectType(n.fullText);
+                n.color = getColorByType(n.type);
+                // 同步回 App (仅颜色，不改分类ID以免混乱，App其实不存typeID)
+                syncToMainApp('update', n);
+            });
+            // 也要同步回 Map 数据以保存状态
             saveAllData();
         }
 
+        // 切换当前节点分类 (手动修正)
         function cycleNodeType() {
             if(!selectedNode) return;
-            let idx = CONFIG.types.findIndex(t => t.id === selectedNode.type);
-            idx = (idx + 1) % CONFIG.types.length;
-            const newType = CONFIG.types[idx];
+            let idx = userTypes.findIndex(t => t.id === selectedNode.type);
+            // 如果没找到(比如是misc)，就从头开始
+            if(idx === -1) idx = -1;
+
+            idx = (idx + 1) % userTypes.length;
+            const newType = userTypes[idx];
+
             selectedNode.type = newType.id;
             selectedNode.color = newType.color;
+
             updateTagUI(selectedNode);
             syncToMainApp('update', selectedNode);
+
+            // [关键] 手动修改后，需要确认保存到关键词库吗？
+            // 这里简化为：手动修改优先级最高，存入 Map 数据
             saveAllData();
+
+            // [可选] 询问是否将当前标题提取为该分类的关键词
+            // if(confirm(`将 "${selectedNode.label}" 加入到 [${newType.name}] 的自动关键词库吗？`)) {
+            //     newType.keywords.push(selectedNode.label);
+            //     saveTypes();
+            // }
         }
 
         function updateTagUI(node) {
             const tag = document.getElementById('nodeTag');
-            tag.innerText = node.type.toUpperCase();
+            const t = userTypes.find(x => x.id === node.type) || {name:'未知', color:'#fff'};
+            tag.innerText = t.name;
             tag.style.borderColor = node.color;
             tag.style.color = node.color;
         }
 
-        // API 联想：直接追加内容
-        async function triggerAIExpand() {
+        // === 6. 其他逻辑 (保存、同步、AI) ===
+
+        function saveNodeData() {
             if(!selectedNode) return;
-            const btn = document.querySelector('.btn-ai');
-            const oldTxt = btn.innerText;
-            if (!apiConfig.key) return alert("请先去设置里填 API Key！");
+            selectedNode.label = document.getElementById('nodeTitle').innerText;
+            selectedNode.desc = document.getElementById('nodeDesc').innerText;
+            selectedNode.fullText = selectedNode.desc.split('\n[AI]:')[0];
 
-            btn.innerText = "🧠...";
-            btn.disabled = true;
-
-            const prompt = `请对概念"${selectedNode.label}"进行深度百科式拓展(100字左右)，直接输出内容，不要废话。`;
-
-            try {
-                const response = await fetch(`${apiConfig.url}/chat/completions`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiConfig.key}` },
-                    body: JSON.stringify({
-                        model: apiConfig.model,
-                        messages: [{role: "user", content: prompt}],
-                        temperature: 0.7
-                    })
-                });
-                const data = await response.json();
-                const content = data.choices[0].message.content;
-
-                // [修改] 直接追加到 desc
-                selectedNode.desc += `\n\n--- [AI 拓展] ---\n${content}`;
-                selectedNode.ai = content; // 留备份
-
-                document.getElementById('nodeDesc').innerText = selectedNode.desc;
-                syncToMainApp('update', selectedNode);
-                saveAllData();
-
-            } catch(e) {
-                alert("AI 罢工了：" + e.message);
-            } finally {
-                btn.innerText = oldTxt;
-                btn.disabled = false;
-            }
+            syncToMainApp('update', selectedNode);
+            saveAllData();
         }
 
-        // 神经分裂：生成子节点
-        async function triggerSplit() {
-            if (!selectedNode) return;
-            const btn = document.querySelector('.btn-split');
-            const originalText = btn.innerText;
-            if (!apiConfig.key) return alert("请设置 API Key！");
-
-            btn.innerText = "⚡...";
-            btn.disabled = true;
-
-            const prompt = `基于"${selectedNode.label}"生成1-3个关联子概念。返回JSON数组:[{"label":"标题","text":"内容"}]`;
-
-            try {
-                const response = await fetch(`${apiConfig.url}/chat/completions`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiConfig.key}` },
-                    body: JSON.stringify({
-                        model: apiConfig.model,
-                        messages: [{role: "user", content: prompt}],
-                        temperature: 0.7
-                    })
-                });
-                const data = await response.json();
-                const content = data.choices[0].message.content.replace(/```json|```/g, '').trim();
-                const newNodesData = JSON.parse(content);
-
-                newNodesData.forEach((item, i) => {
-                    const angle = (Math.PI * 2 / newNodesData.length) * i + Math.random();
-                    const dist = 100;
-
-                    const child = {
-                        id: Date.now() + i,
-                        x: selectedNode.x + Math.cos(angle) * dist,
-                        y: selectedNode.y + Math.sin(angle) * dist,
-                        r: 20,
-                        color: selectedNode.color,
-                        label: item.label,
-                        fullText: item.text,
-                        desc: item.text,
-                        type: selectedNode.type,
-                        ai: '', vx: 0, vy: 0
-                    };
-                    nodes.push(child);
-                    links.push({source: selectedNode, target: child});
-                    syncToMainApp('add', child);
-                });
-
-                saveAllData();
-                alert(`分裂成功：+${newNodesData.length}`);
-
-            } catch (e) {
-                console.error(e);
-                alert("分裂失败");
-            } finally {
-                btn.innerText = originalText;
-                btn.disabled = false;
-            }
-        }
-
-        // 辅助功能
-        function renderTypePanel() { /* 省略，与旧代码一致 */ }
-        function addNewType() { /* 省略，与旧代码一致 */ }
-        function removeType(idx) { /* 省略，与旧代码一致 */ }
-
-        function deleteCurrentNode() {
-            if(!selectedNode) return;
-            if(confirm('删除此节点？')) {
-                syncToMainApp('delete', selectedNode);
-                nodes = nodes.filter(n => n !== selectedNode);
-                links = links.filter(l => l.source !== selectedNode && l.target !== selectedNode);
-                closeNodePanel();
-                saveAllData();
-            }
-        }
-
-        function filterNodes(type, el) {
-            filterType = type;
-            document.querySelectorAll('.dock-item').forEach(d => d.classList.remove('active'));
-            if(el) el.classList.add('active');
-        }
-
-        function toggleTypePanel() {
-            const p = document.getElementById('typePanel');
-            p.style.display = p.style.display==='block'?'none':'block';
-        }
-
-        // 数据同步与保存
         function saveAllData() {
-            localStorage.setItem('neuro_map_data', JSON.stringify(nodes));
+            // 只存位置和类型信息到 Map 数据，不存具体内容，内容以 App 为准
+            const mapData = nodes.map(n => ({
+                id: n.id,
+                x: n.x,
+                y: n.y,
+                type: n.type // 保存手动修改后的类型
+            }));
+            localStorage.setItem('neuro_map_data', JSON.stringify(mapData));
         }
 
         function syncToMainApp(action, node) {
@@ -777,14 +800,14 @@
                 const target = bubbles.find(b => b.id === node.id);
                 if (target) {
                     target.ai = node.ai;
-                    target.detail = node.desc; // [修改] 保存完整描述
+                    target.detail = node.desc; // 存完整描述
                     target.color = node.color;
+                    target.text = node.label;
                 }
             } else if (action === 'delete') {
                 bubbles = bubbles.filter(b => String(b.id) !== String(node.id));
             } else if (action === 'add') {
-                const exists = bubbles.some(b => String(b.id) === String(node.id));
-                if (!exists) {
+                if (!bubbles.some(b => String(b.id) === String(node.id))) {
                     bubbles.push({
                         id: node.id,
                         date: todayStr,
@@ -798,264 +821,99 @@
             localStorage.setItem('mb_bubbles', JSON.stringify(bubbles));
         }
 
-        // 模态框逻辑
-        function openModal(id) {
-            document.getElementById(id).style.display = 'flex';
-            document.getElementById('cfgUrl').value = apiConfig.url;
-            document.getElementById('cfgKey').value = apiConfig.key;
-            document.getElementById('cfgModel').value = apiConfig.model;
-        }
-        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
-
-        function saveConfig() {
-            apiConfig.url = document.getElementById('cfgUrl').value;
-            apiConfig.key = document.getElementById('cfgKey').value;
-            apiConfig.model = document.getElementById('cfgModel').value;
-            localStorage.setItem('nl_api_url', apiConfig.url);
-            localStorage.setItem('nl_api_key', apiConfig.key);
-            localStorage.setItem('nl_api_model', apiConfig.model);
-            closeModal('settingsModal');
-        }
-
-
-async function fetchModels() {
-    // ... (此处直接使用您提供的 fetchModels 代码，逻辑完全一致，不再重复粘贴) ...
-    // 记得把 fetchModels 里的 DOM ID 和这里的 HTML 对应上
-}
-        // === [Patch] 修正后的数据加载逻辑 ===
-
-        function loadData() {
-            // 1. 初始化空数组
-            nodes = [];
-            links = [];
-
-            // 2. 读取两份数据源
-            // source A: 脑图原生数据 (优先级高，包含位置信息)
-            const rawMapData = localStorage.getItem('neuro_map_data');
-            // source B: 主App数据 (您的宝贵遗产)
-            const rawAppData = localStorage.getItem('mb_bubbles');
-
-            let mapNodes = [];
-            let appNodes = [];
-
-            // 3. 解析脑图原生数据
-            if (rawMapData) {
-                try {
-                    mapNodes = JSON.parse(rawMapData);
-                } catch(e) { console.error("脑图数据损坏", e); }
+        function deleteCurrentNode() {
+            if(!selectedNode) return;
+            if(confirm('删除此节点？')) {
+                syncToMainApp('delete', selectedNode);
+                nodes = nodes.filter(n => n !== selectedNode);
+                links = links.filter(l => l.source !== selectedNode && l.target !== selectedNode);
+                closeNodePanel();
+                saveAllData();
             }
-
-            // 4. 解析并转换主App数据
-            if (rawAppData) {
-                try {
-                    const bubbles = JSON.parse(rawAppData);
-                    // 转换核心：把 Bubble 变成 Node
-                    appNodes = bubbles.map((b, i) => {
-                        // 智能类型检测 (保持颜色一致)
-                        const type = detectType(b.text);
-
-                        return {
-                            id: b.id, // 保持 ID 一致，方便去重
-                            // 如果是新数据，给个随机位置；如果是旧数据，稍后会被 mapNodes 覆盖
-                            x: (Math.random() - 0.5) * 600,
-                            y: (Math.random() - 0.5) * 600,
-                            r: 15 + Math.min(b.text.length, 10),
-                            color: b.color || CONFIG.colors[type] || '#BF5AF2', // 优先用主App的颜色
-                            label: b.text.length > 8 ? b.text.substring(0, 8) + '...' : b.text,
-                            fullText: b.text,
-                            // 整合 detail 和 ai 字段
-                            desc: (b.detail ? `[笔记]: ${b.detail}\n` : '') + (b.ai ? `\n[AI]: ${b.ai}` : '暂无详细描述...'),
-                            type: type,
-                            ai: b.ai || '',
-                            vx: 0, vy: 0,
-                            source: 'app' // 标记来源
-                        };
-                    });
-                } catch(e) { console.error("主App数据解析失败", e); }
-            }
-
-            // 5. 数据融合 (Merge)
-            // 策略：以 App 数据为基础，如果 Map 数据里有位置信息，就更新位置
-            // 这样既能看到新加的 Bubble，又能保留拖拽后的位置
-
-            // 创建一个 Map 方便查找，Key 是 ID
-            const nodeMap = new Map();
-
-            // 先把 App 的数据放进去
-            appNodes.forEach(n => nodeMap.set(n.id, n));
-
-            // 再把 Map 的数据覆盖进去 (主要是位置 x,y 和 links)
-            mapNodes.forEach(n => {
-                if (nodeMap.has(n.id)) {
-                    // 如果 ID 存在，更新位置和特定属性，保留 App 的最新文本
-                    const existing = nodeMap.get(n.id);
-                    existing.x = n.x;
-                    existing.y = n.y;
-                    existing.expanded = n.expanded; // 比如是否已分裂
-                } else {
-                    // 如果 App 里没了（被删了）但 Map 里还有...
-                    // 策略：看您喜好，这里默认保留，防止误删
-                    // 标记为脑图特有
-                    n.source = 'map';
-                    nodeMap.set(n.id, n);
-                }
-            });
-
-            // 转回数组
-            nodes = Array.from(nodeMap.values());
-
-            // 6. 如果完全没数据，搞点 Demo
-            if (nodes.length === 0) {
-                generateDemoNodes(10);
-            }
-
-            // 7. 重建连接 (简单的临近连接，让图看起来不散)
-            // 注意：真实的连接关系应该存起来，这里为了省事每次重算一遍随机连接
-            // 如果您希望连接关系也持久化，需要把 links 也存进 localStorage
-            rebuildLinks();
         }
 
-        // [辅助] 类型检测 (保持不变)
-        function detectType(text) {
-            const t = text.toLowerCase();
-            if (/语言|英语|日文|单词|语法|speak/i.test(t)) return 'language';
-            if (/数学|物理|代码|js|算法|logic/i.test(t)) return 'science';
-            if (/游戏|电影|赛车|f1|玩|fun/i.test(t)) return 'entertainment';
-            return 'misc';
+        // AI 拓展
+        async function triggerAIExpand() {
+            if(!selectedNode) return;
+            const btn = document.querySelector('.btn-ai');
+            const oldTxt = btn.innerText;
+            if (!apiConfig.key) return alert("请先去设置里填 API Key！");
+            btn.innerText = "🧠..."; btn.disabled = true;
+
+            const prompt = `请对"${selectedNode.label}"进行深度百科式拓展(100字左右)，直接输出内容。`;
+            try {
+                const response = await fetch(`${apiConfig.url}/chat/completions`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiConfig.key}` },
+                    body: JSON.stringify({ model: apiConfig.model, messages: [{role: "user", content: prompt}], temperature: 0.7 })
+                });
+                const data = await response.json();
+                const content = data.choices[0].message.content;
+                selectedNode.desc += `\n\n[AI]: ${content}`;
+                selectedNode.ai = content;
+                document.getElementById('nodeDesc').innerText = selectedNode.desc;
+                syncToMainApp('update', selectedNode);
+                saveAllData();
+            } catch(e) { alert("AI Error: " + e.message); }
+            finally { btn.innerText = oldTxt; btn.disabled = false; }
         }
 
-        // [辅助] 每次加载重置连接 (可改为从存储读取)
-        function rebuildLinks() {
-            links = [];
-            // 简单的随机连线，模拟神经网络
-            // 优化：只连接同类型的，或者距离近的
-            nodes.forEach((node, i) => {
-                // 每个节点尝试连接 1-2 个邻居
-                let targets = 1 + Math.floor(Math.random() * 2);
-                for (let j = 0; j < targets; j++) {
-                    let targetIdx = Math.floor(Math.random() * nodes.length);
-                    if (targetIdx !== i) {
-                        // 简单防重
-                        links.push({ source: node, target: nodes[targetIdx] });
-                    }
-                }
-            });
+        // 神经分裂
+        async function triggerSplit() {
+            // ... (与之前逻辑相同，省略以节省空间，功能需保留) ...
+            if (!selectedNode) return;
+            const btn = document.querySelector('.btn-split');
+            if (!apiConfig.key) return alert("API Key?");
+            btn.innerText = "⚡..."; btn.disabled = true;
+
+            const prompt = `基于"${selectedNode.label}"生成1-3个关联子概念。返回JSON数组:[{"label":"标题","text":"内容"}]`;
+            try {
+                const response = await fetch(`${apiConfig.url}/chat/completions`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiConfig.key}` },
+                    body: JSON.stringify({ model: apiConfig.model, messages: [{role: "user", content: prompt}], temperature: 0.7 })
+                });
+                const data = await response.json();
+                const content = data.choices[0].message.content.replace(/```json|```/g, '').trim();
+                const newNodesData = JSON.parse(content);
+                newNodesData.forEach((item, i) => {
+                    const angle = (Math.PI * 2 / newNodesData.length) * i + Math.random();
+                    const dist = 100;
+                    const child = {
+                        id: Date.now() + i,
+                        x: selectedNode.x + Math.cos(angle) * dist,
+                        y: selectedNode.y + Math.sin(angle) * dist,
+                        r: 20, color: selectedNode.color,
+                        label: item.label, fullText: item.text, desc: item.text,
+                        type: selectedNode.type, ai: '', vx: 0, vy: 0
+                    };
+                    nodes.push(child);
+                    links.push({source: selectedNode, target: child});
+                    syncToMainApp('add', child);
+                });
+                saveAllData();
+            } catch (e) { console.error(e); } finally { btn.innerText = "⚡ 神经分裂"; btn.disabled = false; }
         }
 
-        // [Patch] 保存逻辑也要微调，防止把 App 的数据写坏
-        // 我们只保存“位置”和“脑图特有属性”到 neuro_map_data
-        // App 的原生数据 (text, color) 不在这里改，除非您想双向同步
-
-        function saveAllData() {
-            // 存完整的一份到 neuro_map_data，作为脑图的“存档”
-            // 这样下次进来，位置就被记住了
-            localStorage.setItem('neuro_map_data', JSON.stringify(nodes));
-
-            // 提示：目前是单向同步 (App -> Map)
-            // 如果在 Map 里改了字，App 不会变。想变的话得反向写回 mb_bubbles，有点风险。
-            // 建议：脑图作为“查看+发散”工具，修改还是回主页改比较安全。
+        // 辅助 UI 逻辑
+        function toggleTypePanel() {
+            const p = document.getElementById('typePanel');
+            p.style.display = p.style.display==='block'?'none':'block';
         }
-
-
-// === [新增] 双向同步核心函数 ===
-
-// === [修复] 双向同步 (防重 + 严谨删除) ===
-function syncToMainApp(action, node) {
-    const raw = localStorage.getItem('mb_bubbles');
-    let bubbles = raw ? JSON.parse(raw) : [];
-    const todayStr = new Date().toISOString().split('T')[0];
-
-    if (action === 'update') {
-        const target = bubbles.find(b => b.id === node.id);
-        if (target) {
-            target.ai = node.ai;
-            target.detail = node.fullText; // 同步正文
-            target.color = node.color;     // 同步颜色
+        function filterNodes(type, el) {
+            filterType = type;
+            document.querySelectorAll('.dock-item').forEach(d => d.classList.remove('active'));
+            if(el) el.classList.add('active');
         }
-    } else if (action === 'delete') {
-        // [修复] 确保类型一致再删 (ID 可能是数字或字符串)
-        bubbles = bubbles.filter(b => String(b.id) !== String(node.id));
-    } else if (action === 'add') {
-        // [关键修复] 防重检查！如果 ID 已存在，绝对不 Push！
-        const exists = bubbles.some(b => String(b.id) === String(node.id));
-        if (!exists) {
-            bubbles.push({
-                id: node.id,
-                date: todayStr,
-                text: node.label, // 标题
-                detail: node.fullText, // 正文
-                ai: node.ai,
-                color: node.color
-            });
-        }
-    }
-    localStorage.setItem('mb_bubbles', JSON.stringify(bubbles));
-}
-// === [Patch] 修正后的数据加载逻辑 ===
-function loadData() {
-    nodes = []; links = [];
-    // 读取两份数据
-    const rawMapData = localStorage.getItem('neuro_map_data'); // 脑图特有数据(位置)
-    const rawAppData = localStorage.getItem('mb_bubbles');     // 主App数据(内容/颜色)
-
-    let mapNodes = rawMapData ? JSON.parse(rawMapData) : [];
-    let appNodes = rawAppData ? JSON.parse(rawAppData) : [];
-
-    // 创建Map方便查找
-    const nodeMap = new Map();
-
-    // 1. 先载入App数据 (保证内容最新)
-    appNodes.forEach(b => {
-        const type = detectType(b.text);
-        nodeMap.set(b.id, {
-            id: b.id,
-            // 如果Map数据里有位置就用Map的，没有就随机
-            x: (Math.random() - 0.5) * 600,
-            y: (Math.random() - 0.5) * 600,
-            r: 15 + Math.min(b.text.length, 10),
-            color: b.color || CONFIG.colors[type] || '#BF5AF2', // 优先用主App存的颜色
-            label: b.text.substring(0, 8) + '...',
-            fullText: b.text,
-            desc: (b.detail||'') + (b.ai?`\n[AI]: ${b.ai}`:''),
-            type: type,
-            ai: b.ai || '',
-            vx: 0, vy: 0,
-            source: 'app'
-        });
-    });
-
-    // 2. 用Map数据覆盖位置信息
-    mapNodes.forEach(n => {
-        if (nodeMap.has(n.id)) {
-            const existing = nodeMap.get(n.id);
-            existing.x = n.x;
-            existing.y = n.y;
-            // 注意：不要覆盖color和text，以App数据为准
-        } else {
-            // 如果App里删了，脑图里还有，看你需不需要保留。这里为了演示先保留
-             n.source = 'map';
-             nodeMap.set(n.id, n);
-        }
-    });
-
-    nodes = Array.from(nodeMap.values());
-    if (nodes.length === 0) generateDemoNodes(10);
-    rebuildLinks();
-}
-
-
-
         function goBack() { window.location.href = 'index.html'; }
+
+        // 模态框
+        function openModal(id) { document.getElementById(id).style.display = 'flex'; document.getElementById('cfgUrl').value = apiConfig.url; document.getElementById('cfgKey').value = apiConfig.key; document.getElementById('cfgModel').value = apiConfig.model; }
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+        function saveConfig() { apiConfig.url = document.getElementById('cfgUrl').value; apiConfig.key = document.getElementById('cfgKey').value; apiConfig.model = document.getElementById('cfgModel').value; localStorage.setItem('nl_api_url', apiConfig.url); localStorage.setItem('nl_api_key', apiConfig.key); localStorage.setItem('nl_api_model', apiConfig.model); closeModal('settingsModal'); }
+        async function fetchModels() { /* 复用之前的 fetchModels 代码 */ }
 
         init();
     </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
