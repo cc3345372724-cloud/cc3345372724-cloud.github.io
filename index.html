@@ -10,392 +10,403 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <meta name="apple-mobile-web-app-title" content="MGardon">
     <link rel="apple-touch-icon" href="/79bb12d7b45f22e817a27c146a8b5571.png">
-<style>
-    /* === 0. 核心变量与重置：定义高级感的灵魂 === */
-    :root {
-        /* [视觉基调] 高级磨砂玻璃参数 */
-        --glass-bg: rgba(30, 30, 30, 0.65);         /* 稍微深一点的半透明底，防瞎眼 */
-        --glass-light: rgba(255, 255, 255, 0.08);   /* 高光层 */
-        --glass-border: rgba(255, 255, 255, 0.12);  /* 极细的边框线，似有若无 */
-        --glass-blur: 25px;                         /* 深度模糊，高级感的来源 */
+    <style>
+        /* === 0. 核心变量与重置 (已优化配色与质感) === */
+        :root {
+            /* 视觉基调 - 更通透的磨砂 */
+            --glass-bg: rgba(255, 255, 255, 0.05); /* 降低不透明度 */
+            --glass-border: rgba(255, 255, 255, 0.1); /* 更细微的边框 */
+            --glass-blur: 25px; /* 加大模糊度，增加高级感 */
+            --text-main: rgba(255, 255, 255, 0.95);
+            --text-sub: rgba(255, 255, 255, 0.55);
 
-        --text-main: #FFFFFF;
-        --text-sub: rgba(235, 235, 245, 0.6);       /* iOS 风格次级文本色 */
+            /* 功能色 - iOS 原生感 */
+            --accent-blue: #0A84FF;
+            --accent-green: #30D158;
+            --accent-red: #FF453A;
+            --card-bg: rgba(28, 28, 30, 0.85); /* 卡片背景也改为半透明 */
 
-        /* [功能色] 保持高饱和度但要克制使用 */
-        --accent-blue: #0A84FF;
-        --accent-green: #30D158;
-        --accent-red: #FF453A;
-        --accent-yellow: #FFD60A;
-        --card-bg: #1C1C1E; /* 纯色卡片底，用于Modal */
+            /* 渐变色 */
+            --primary-gradient: linear-gradient(135deg, #00C9FF 0%, #92FE9D 100%);
 
-        /* [心情色] */
-        --mood-red: #FF453A;
-        --mood-orange: #FF9F0A;
-        --mood-yellow: #FFD60A;
-        --mood-green: #32D74B;
-        --mood-pink: #BF5AF2;
-    }
-
-    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-
-    body {
-        font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
-        background-color: #000;
-        color: var(--text-main);
-        height: auto;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-    }
-
-    /* === 1. 背景层：深邃的渐变，不喧宾夺主 === */
-    .bg-layer {
-        position: fixed; inset: 0;
-        background: linear-gradient(160deg, #0F2027 0%, #203A43 50%, #2C5364 100%);
-        z-index: -2;
-    }
-    .bg-image {
-        position: fixed; inset: 0; background-size: cover; background-position: center;
-        opacity: 0.6; z-index: -1; filter: blur(50px) saturate(1.2); /* 这里的模糊让背景图变成光晕 */
-        transition: 0.5s;
-    }
-
-    /* === 2. 顶部导航：通透悬浮 === */
-    .top-bar {
-        flex-shrink: 0;
-        padding: 15px 20px;
-        /* 移除底部实线边框，改用背景模糊区分层级 */
-        background: rgba(0,0,0,0.2);
-        backdrop-filter: blur(var(--glass-blur));
-        -webkit-backdrop-filter: blur(var(--glass-blur));
-        z-index: 100;
-        display: flex; justify-content: space-between; align-items: center;
-    }
-    .date-title { font-size: 20px; font-weight: 700; letter-spacing: 0.5px; }
-    .icon-btn {
-        background: rgba(255,255,255,0.1); border: none; color: #fff;
-        width: 36px; height: 36px; border-radius: 50%;
-        display: flex; align-items: center; justify-content: center;
-        font-size: 16px; cursor: pointer; transition: 0.2s;
-        backdrop-filter: blur(10px);
-    }
-    .icon-btn:hover { background: rgba(255,255,255,0.2); transform: scale(1.05); }
-
-    /* === 3. 日历条：胶囊风格 === */
-    .calendar-strip-container {
-        flex-shrink: 0; padding: 10px 0 20px;
-        background: transparent; /* 去掉背景色，完全悬浮 */
-    }
-    .calendar-strip {
-        display: flex; gap: 12px; padding: 0 20px; overflow-x: auto;
-        scrollbar-width: none; mask-image: linear-gradient(to right, transparent, black 10px, black 90%, transparent);
-    }
-    .calendar-strip::-webkit-scrollbar { display: none; }
-
-    .day-pill {
-        flex: 0 0 50px; height: 70px;
-        border-radius: 25px; /* 更圆润 */
-        background: var(--glass-bg);
-        border: 1px solid var(--glass-border);
-        display: flex; flex-direction: column; align-items: center; justify-content: center;
-        transition: 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-        cursor: pointer; position: relative; overflow: hidden;
-    }
-    .day-pill span:first-child { font-size: 11px; color: var(--text-sub); margin-bottom: 4px; font-weight: 500; }
-    .day-pill span:last-child { font-size: 18px; font-weight: 600; }
-
-    /* 选中态：发光效果 */
-    .day-pill.active {
-        background: #fff;
-        border-color: #fff;
-        transform: translateY(-2px) scale(1.05);
-        box-shadow: 0 10px 25px rgba(255, 255, 255, 0.15);
-    }
-    .day-pill.active span { color: #000 !important; }
-
-    /* 心情圆点指示器 */
-    .day-pill[data-mood]::after {
-        content: ''; position: absolute; bottom: 6px;
-        width: 4px; height: 4px; border-radius: 50%;
-    }
-    .day-pill[data-mood="red"]::after { background: var(--mood-red); box-shadow: 0 0 6px var(--mood-red); }
-    .day-pill[data-mood="orange"]::after { background: var(--mood-orange); box-shadow: 0 0 6px var(--mood-orange); }
-    .day-pill[data-mood="yellow"]::after { background: var(--mood-yellow); box-shadow: 0 0 6px var(--mood-yellow); }
-    .day-pill[data-mood="green"]::after { background: var(--mood-green); box-shadow: 0 0 6px var(--mood-green); }
-    .day-pill[data-mood="pink"]::after { background: var(--mood-pink); box-shadow: 0 0 6px var(--mood-pink); }
-
-    /* === 4. 待办事项：玻璃卡片 === */
-    .todo-section {
-        flex-shrink: 0;
-        margin: 0 20px 10px; padding: 16px;
-        background: var(--glass-bg);
-        backdrop-filter: blur(20px);
-        -webkit-backdrop-filter: blur(20px);
-        border: 1px solid var(--glass-border);
-        border-radius: 24px;
-        max-height: 180px; overflow-y: auto;
-    }
-    .todo-header {
-        font-size: 12px; font-weight: 600; color: var(--text-sub); letter-spacing: 1px;
-        margin-bottom: 12px; display: flex; justify-content: space-between;
-    }
-    .todo-item {
-        display: flex; align-items: center; gap: 12px; margin-bottom: 8px;
-        padding: 8px; border-radius: 12px;
-        transition: background 0.2s;
-    }
-    .todo-item:hover { background: rgba(255,255,255,0.03); }
-
-    .todo-checkbox {
-        width: 20px; height: 20px; border-radius: 6px;
-        border: 2px solid rgba(255,255,255,0.3);
-        cursor: pointer; transition: 0.2s; position: relative;
-    }
-    .todo-checkbox.checked {
-        background: var(--accent-green); border-color: var(--accent-green);
-        box-shadow: 0 0 10px rgba(48, 209, 88, 0.4);
-    }
-    .todo-text {
-        font-size: 15px; color: #fff; background: transparent; border: none; outline: none; width: 100%;
-    }
-    .todo-text.done { color: var(--text-sub); text-decoration: line-through; }
-
-    .add-todo-btn {
-        margin-top: 8px; padding: 10px; text-align: center;
-        font-size: 13px; font-weight: 600; color: var(--accent-blue);
-        background: rgba(10, 132, 255, 0.1); border-radius: 12px;
-        cursor: pointer; transition: 0.2s;
-    }
-    .add-todo-btn:hover { background: rgba(10, 132, 255, 0.2); }
-
-    /* === 5. 主舞台：漂浮气泡 === */
-    .main-stage {
-        flex: 1; overflow-y: auto; overflow-x: hidden;
-        padding: 20px;
-        display: flex; flex-wrap: wrap; align-content: flex-start; justify-content: center; gap: 16px;
-    }
-    .bubble {
-        width: 96px; height: 96px; border-radius: 50%;
-        /* 核心美化：极度通透的渐变球体 */
-        background: linear-gradient(145deg, rgba(255,255,255,0.15), rgba(255,255,255,0.05));
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255,255,255,0.2);
-        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
-
-        display: flex; align-items: center; justify-content: center;
-        text-align: center; padding: 14px;
-        font-size: 13px; line-height: 1.4; font-weight: 500;
-        cursor: pointer; position: relative;
-        animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        transition: transform 0.2s;
-    }
-    .bubble:active { transform: scale(0.92); }
-    /* AI 标记点 */
-    .ai-tag {
-        position: absolute; top: 0; right: 0;
-        width: 12px; height: 12px; background: #000; border-radius: 50%;
-        border: 2px solid rgba(255,255,255,0.3);
-        background: var(--accent-green);
-        box-shadow: 0 0 8px var(--accent-green);
-    }
-
-    /* === 6. 底部 Dock：重中之重 === */
-    .bottom-dock {
-        flex-shrink: 0; padding: 20px;
-        /* 高级毛玻璃底座 */
-        background: rgba(20, 20, 20, 0.75);
-        backdrop-filter: blur(35px); -webkit-backdrop-filter: blur(35px);
-        border-top: 0.5px solid rgba(255,255,255,0.1);
-        padding-bottom: max(20px, env(safe-area-inset-bottom));
-        display: flex; flex-direction: column; gap: 16px;
-        box-shadow: 0 -10px 40px rgba(0,0,0,0.3);
-    }
-
-    .dock-row { display: flex; gap: 12px; overflow-x: auto; padding: 4px; scrollbar-width: none; }
-
-    .dock-btn {
-        white-space: nowrap; padding: 10px 18px; border-radius: 20px;
-        font-size: 13px; font-weight: 600; cursor: pointer;
-        background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.05);
-        color: #fff; transition: 0.2s;
-    }
-    .dock-btn:hover { background: rgba(255,255,255,0.15); }
-    .dock-btn.highlight {
-        background: var(--accent-blue);
-        color: #fff; box-shadow: 0 4px 15px rgba(10, 132, 255, 0.3);
-        border: none;
-    }
-
-    .input-row { display: flex; gap: 12px; align-items: center; }
-    #mainInput {
-        flex: 1; height: 52px; padding: 0 24px;
-        border-radius: 26px;
-        background: rgba(255,255,255,0.1);
-        border: 1px solid rgba(255,255,255,0.1);
-        color: #fff; font-size: 16px; outline: none;
-        transition: 0.3s;
-        box-shadow: inset 0 2px 4px rgba(0,0,0,0.2); /* 内阴影增加质感 */
-    }
-    #mainInput:focus {
-        background: rgba(255,255,255,0.15);
-        border-color: rgba(255,255,255,0.3);
-        box-shadow: inset 0 2px 4px rgba(0,0,0,0.1), 0 0 0 2px rgba(255,255,255,0.1);
-    }
-
-    #sendBtn {
-        width: 52px; height: 52px; border-radius: 50%; border: none;
-        background: var(--accent-blue);
-        color: #fff; font-size: 22px; cursor: pointer;
-        box-shadow: 0 4px 15px rgba(10, 132, 255, 0.4);
-        display: flex; align-items: center; justify-content: center;
-        transition: transform 0.2s;
-    }
-    #sendBtn:active { transform: scale(0.9); }
-
-    /* === 7. 模态框 (iOS Sheet 风格) === */
-    .modal-overlay {
-        position: fixed; inset: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(8px);
-        z-index: 1000; display: none;
-        opacity: 0; transition: opacity 0.3s;
-        /* 默认从底部弹出 */
-        align-items: flex-end; justify-content: center;
-    }
-    .modal-overlay.active { display: flex; opacity: 1; }
-
-    .modal-card {
-        width: 100%; max-width: 600px;
-        max-height: auto; overflow-y: auto;
-        /* 上圆角 */
-        border-radius: 32px 32px 0 0;
-        background: #1C1C1E; /* 不透明深色底，防止内容重叠 */
-        border-top: 1px solid rgba(255,255,255,0.15);
-        padding: 30px 24px 50px;
-        transform: translateY(100%); transition: transform 0.4s cubic-bezier(0.19, 1, 0.22, 1);
-        box-shadow: 0 -10px 50px rgba(0,0,0,0.5);
-    }
-    /* 桌面端适配：居中弹窗 */
-    @media (min-width: 600px) {
-        .modal-overlay { align-items: center; }
-        .modal-card {
-            width: 420px; border-radius: 24px;
-            transform: scale(0.95); opacity: 0;
+            /* 心情颜色 */
+            --mood-red: #FF6B6B;
+            --mood-orange: #FFAA64;
+            --mood-yellow: #FFE66D;
+            --mood-green: #4ECDC4;
+            --mood-pink: #FF9A9E;
         }
-        .modal-overlay.active .modal-card { transform: scale(1); opacity: 1; }
-    }
-    /* 移动端激活态 */
-    .modal-overlay.active .modal-card { transform: translateY(0); }
 
-    /* 模态框内部元素美化 */
-    .modal-header {
-        font-size: 22px; font-weight: 700; margin-bottom: 25px;
-        display: flex; justify-content: space-between; align-items: center;
-    }
-    .close-icon {
-        width: 30px; height: 30px; background: rgba(255,255,255,0.1);
-        border-radius: 50%; font-size: 20px;
-        display: flex; align-items: center; justify-content: center;
-        color: var(--text-sub); cursor: pointer;
-    }
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
-    .form-group { margin-bottom: 20px; }
-    .form-label { font-size: 13px; color: var(--text-sub); margin-bottom: 8px; font-weight: 500; }
-    .form-input, .form-textarea {
-        width: 100%; padding: 16px;
-        background: rgba(255,255,255,0.08);
-        border: 1px solid rgba(255,255,255,0.05); border-radius: 16px;
-        color: #fff; font-size: 16px; outline: none;
-        transition: 0.2s;
-    }
-    .form-input:focus, .form-textarea:focus {
-        background: rgba(255,255,255,0.12); border-color: var(--accent-blue);
-    }
-    .form-textarea { min-height: 140px; line-height: 1.6; resize: none; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+            background-color: #000;
+            color: var(--text-main);
+            height: auto;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
 
-    .btn-primary {
-        width: 100%; padding: 16px; border-radius: 16px; border: none;
-        background: var(--accent-blue); color: #fff; font-weight: 600; font-size: 17px;
-        cursor: pointer; margin-top: 15px; transition: 0.2s;
-        box-shadow: 0 4px 12px rgba(10, 132, 255, 0.3);
-    }
-    .btn-primary:active { transform: scale(0.98); }
-    .btn-secondary { background: rgba(255,255,255,0.1); color: #fff; box-shadow: none; }
-    .btn-danger { background: rgba(255, 69, 58, 0.15); color: var(--accent-red); box-shadow: none; }
+        /* === 1. 动态背景层 === */
+        .bg-layer { position: fixed; inset: 0; background: linear-gradient(to bottom, #0f2027, #203a43, #2c5364); z-index: -2; }
+        .bg-image {
+            position: fixed; inset: 0; background-size: cover; background-position: center;
+            opacity: 0.6; /* 稍微调高亮度，配合磨砂 */
+            z-index: -1; filter: blur(20px); /* 加大背景模糊，突出前景 */
+            transition: 0.5s;
+            background-image: url('https://images.unsplash.com/photo-1518020382113-a7e8fc38eac9?q=80&w=2000&auto=format&fit=crop');
+        }
 
-    /* 心情选择器 */
-    .mood-selector {
-        background: rgba(255,255,255,0.05); padding: 15px; border-radius: 20px;
-        display: flex; justify-content: space-between; gap: 10px;
-    }
-    .mood-item {
-        width: 44px; height: 44px; border-radius: 50%;
-        background: currentColor; opacity: 0.3; transform: scale(0.9);
-        transition: 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); cursor: pointer;
-    }
-    .mood-item.selected { opacity: 1; transform: scale(1.1); box-shadow: 0 0 20px currentColor; }
+        /* === 2. 顶部导航栏 (半透明磨砂) === */
+        .top-bar {
+            flex-shrink: 0;
+            padding: 12px 20px;
+            /* 关键修改：去除深色遮罩，使用纯粹的模糊 */
+            background: rgba(0,0,0,0.1);
+            backdrop-filter: blur(var(--glass-blur));
+            -webkit-backdrop-filter: blur(var(--glass-blur));
+            border-bottom: 0.5px solid var(--glass-border);
+            z-index: 100;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .date-control { display: flex; align-items: center; gap: 15px; }
+        .date-title { font-size: 17px; font-weight: 600; text-shadow: 0 2px 10px rgba(0,0,0,0.3); }
+        .icon-btn {
+            background: none; border: none; color: var(--accent-blue); font-size: 18px;
+            cursor: pointer; padding: 5px; transition: transform 0.2s;
+            text-shadow: 0 0 15px rgba(10, 132, 255, 0.5); /* 给按钮加点光 */
+        }
+        .icon-btn:hover { transform: scale(1.1); }
+        .top-actions { display: flex; gap: 15px; }
 
-    /* AI 内容框 */
-    .ai-content-box {
-        margin-top: 20px; padding: 20px;
-        background: rgba(255,255,255,0.05); border-radius: 18px;
-        border-left: 4px solid var(--accent-green);
-        font-size: 15px; line-height: 1.7; color: rgba(255,255,255,0.9);
-        display: none; white-space: pre-wrap;
-    }
+        /* === 3. 日历条 (通透胶囊) === */
+        .calendar-strip-container {
+            flex-shrink: 0; padding: 10px 0;
+            background: rgba(255,255,255,0.01); /* 几乎透明 */
+        }
+        .calendar-strip {
+            display: flex; gap: 8px; padding: 0 15px; overflow-x: auto;
+            scrollbar-width: none;
+        }
+        .calendar-strip::-webkit-scrollbar { display: none; }
 
-    /* 统计图表美化 */
-    .pie-chart {
-        width: 180px; height: 180px; border-radius: 50%; margin: 10px auto 30px;
-        position: relative;
-        box-shadow: 0 0 40px rgba(0,0,0,0.3); /* 发光图表 */
-    }
-    /* 镂空中间做成圆环图更高级 */
-    .pie-chart::after {
-        content: ''; position: absolute; inset: 20px; background: #1C1C1E; border-radius: 50%;
-    }
+        .day-pill {
+            flex: 0 0 46px; height: 62px; border-radius: 14px;
+            background: rgba(255,255,255,0.08); /* 半透明底 */
+            backdrop-filter: blur(10px);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            font-size: 12px; border: 1px solid rgba(255,255,255,0.05);
+            transition: 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            position: relative;
+            cursor: pointer;
+        }
+        .day-pill span:first-child { font-size: 10px; opacity: 0.6; margin-bottom: 2px; }
+        .day-pill span:last-child { font-size: 16px; font-weight: 600; }
 
-    /* 复习卡片：拟态 */
-    .review-card {
-        background: linear-gradient(135deg, #2C2C2E, #1C1C1E);
-        border-radius: 24px; padding: 40px 30px; min-height: 260px;
-        display: flex; flex-direction: column; justify-content: center; text-align: center;
-        margin-bottom: 25px; box-shadow: 0 15px 40px rgba(0,0,0,0.4);
-        border: 1px solid rgba(255,255,255,0.1);
-        cursor: pointer; position: relative; overflow: hidden;
-    }
-    .review-card::before {
-        content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
-        background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 60%);
-        pointer-events: none;
-    }
+        .day-pill.active {
+            background: #fff; color: #000;
+            box-shadow: 0 4px 20px rgba(255,255,255,0.3); /* 发光感 */
+            transform: translateY(-2px);
+        }
+        .day-pill.has-data { border-color: var(--accent-green); }
 
-    /* 颜色选择器微调 */
-    .color-picker-row { justify-content: center; padding: 10px 0; }
-    .color-opt {
-        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-        border: 2px solid rgba(255,255,255,0.1) !important;
-    }
-    .color-opt.active { border-color: #fff !important; transform: scale(1.2); }
+        /* 心情标记 - 增加光晕 */
+        .day-pill[data-mood="red"] { border-color: var(--mood-red); box-shadow: 0 0 10px rgba(255, 107, 107, 0.3) inset; }
+        .day-pill[data-mood="orange"] { border-color: var(--mood-orange); box-shadow: 0 0 10px rgba(255, 170, 100, 0.3) inset; }
+        .day-pill[data-mood="yellow"] { border-color: var(--mood-yellow); box-shadow: 0 0 10px rgba(255, 230, 109, 0.3) inset; }
+        .day-pill[data-mood="green"] { border-color: var(--mood-green); box-shadow: 0 0 10px rgba(78, 205, 196, 0.3) inset; }
+        .day-pill[data-mood="pink"] { border-color: var(--mood-pink); box-shadow: 0 0 10px rgba(255, 154, 158, 0.3) inset; }
 
-    /* 模型列表滚动条美化 */
-    #modelList::-webkit-scrollbar { width: 4px; }
-    #modelList::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+        /* === 4. 待办事项区域 (磨砂卡片) === */
+        .todo-section {
+            flex-shrink: 0;
+            padding: 15px; margin: 10px 15px 5px;
+            background: rgba(30, 30, 30, 0.3); /* 降低透明度 */
+            backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.08);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            max-height: 160px; overflow-y: auto;
+            display: flex; flex-direction: column; gap: 8px;
+        }
+        .todo-header {
+            font-size: 13px; color: var(--text-sub); display: flex; justify-content: space-between;
+            margin-bottom: 5px; position: sticky; top: 0; z-index: 10;
+        }
+        .todo-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px;
+            background: rgba(255,255,255,0.03); /* 极淡的背景 */
+            border-radius: 12px;
+            transition: all 0.2s; animation: slideIn 0.3s;
+            border: 1px solid transparent;
+        }
+        .todo-item:hover { background: rgba(255,255,255,0.08); }
 
-    /* 动画定义 */
-    @keyframes popIn {
-        0% { transform: scale(0); opacity: 0; }
-        100% { transform: scale(1); opacity: 1; }
-    }
-    @keyframes slideIn {
-        from { opacity: 0; transform: translateY(-10px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-    @keyframes bounceCheck {
-        0% { transform: scale(1); }
-        50% { transform: scale(1.25); }
-        100% { transform: scale(1); }
-    }
-</style>
+        .todo-checkbox {
+            width: 22px; height: 22px; border-radius: 6px; border: 2px solid var(--text-sub);
+            display: flex; align-items: center; justify-content: center; cursor: pointer;
+            transition: 0.2s; flex-shrink: 0;
+        }
+        .todo-checkbox.checked {
+            background: var(--accent-green); border-color: var(--accent-green);
+            animation: bounceCheck 0.4s;
+            box-shadow: 0 0 10px rgba(48, 209, 88, 0.4);
+        }
+        .todo-checkbox.checked::after { content: '✓'; color: #fff; font-size: 14px; font-weight: bold; }
+
+        .todo-text {
+            flex: 1; font-size: 14px; outline: none; background: transparent; border: none;
+            color: #fff; font-family: inherit;
+        }
+        .todo-text.done { text-decoration: line-through; color: var(--text-sub); }
+
+        .add-todo-btn {
+            text-align: center; padding: 8px; font-size: 18px; color: var(--text-sub);
+            cursor: pointer; border-radius: 8px; background: rgba(255,255,255,0.02);
+            transition: 0.2s;
+        }
+        .add-todo-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
+
+        /* === 5. 主舞台 (晶莹剔透的气泡) === */
+        .main-stage {
+            flex: 1; overflow-y: auto; overflow-x: hidden;
+            padding: 20px; position: relative;
+            display: flex; flex-wrap: wrap; align-content: flex-start; justify-content: center; gap: 15px;
+        }
+        .bubble {
+            border-radius: 50%; width: 90px; height: 90px;
+            /* 关键美化：更通透的材质 */
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.15);
+            display: flex; align-items: center; justify-content: center;
+            text-align: center; padding: 10px; font-size: 12px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+            animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: pointer; position: relative;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .bubble:active { transform: scale(0.92); }
+        .bubble span {
+            display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5); /* 文字加阴影防背景干扰 */
+        }
+
+        .ai-tag {
+            position: absolute; top: 10px; right: 10px;
+            width: 8px; height: 8px; background: #92FE9D; border-radius: 50%;
+            box-shadow: 0 0 8px #92FE9D; display: none;
+        }
+        .bubble.has-ai .ai-tag { display: block; }
+
+        /* === 6. 底部 Dock (极致磨砂) === */
+        .bottom-dock {
+            flex-shrink: 0; padding: 15px;
+            /* 模仿 iOS 底部栏 */
+            background: rgba(20, 20, 20, 0.6);
+            backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px);
+            border-top: 0.5px solid rgba(255,255,255,0.1);
+            display: flex; flex-direction: column; gap: 12px;
+            padding-bottom: max(15px, env(safe-area-inset-bottom));
+            z-index: 200;
+        }
+        .dock-row {
+            display: flex; gap: 10px; overflow-x: auto; padding-bottom: 2px;
+            scrollbar-width: none;
+        }
+        .dock-row::-webkit-scrollbar { display: none; }
+
+        .dock-btn {
+            white-space: nowrap; padding: 8px 16px; border-radius: 20px;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: var(--text-main); font-size: 13px; cursor: pointer;
+            display: flex; align-items: center; gap: 6px; transition: all 0.2s;
+        }
+        .dock-btn:hover { background: rgba(255,255,255,0.15); }
+        .dock-btn.highlight {
+            background: linear-gradient(135deg, rgba(10, 132, 255, 0.3), rgba(48, 209, 88, 0.3));
+            border: 1px solid rgba(255,255,255,0.2);
+            color: #fff; font-weight: 500;
+            box-shadow: 0 0 15px rgba(10, 132, 255, 0.2);
+        }
+
+        /* [重要修正] 底部输入框样式复原 + 美化 */
+        .input-row { display: flex; gap: 12px; align-items: center; margin-top: 5px; }
+        #mainInput {
+            flex: 1; height: 50px; padding: 0 20px;
+            border-radius: 25px;
+            border: 1px solid rgba(255,255,255,0.15);
+            /* 更细腻的磨砂输入框 */
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            color: #fff; font-size: 16px; outline: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: all 0.2s;
+        }
+        #mainInput:focus {
+            border-color: var(--accent-blue);
+            background: rgba(30,30,30,0.8); /* 聚焦时稍微变深，增加可读性 */
+            box-shadow: 0 0 0 4px rgba(10, 132, 255, 0.2);
+        }
+
+        #sendBtn {
+            width: 50px; height: 50px; border-radius: 50%; border: none;
+            background: var(--accent-blue);
+            background: var(--primary-gradient); /* 保持渐变更好看 */
+            color: #fff; font-size: 20px;
+            box-shadow: 0 4px 12px rgba(10, 132, 255, 0.4);
+            transition: transform 0.2s;
+            display: flex; justify-content: center; align-items: center;
+        }
+        #sendBtn:active { transform: scale(0.9); }
+
+        /* === 7. 模态框 (全面美化 - 磨砂半透明) === */
+        .modal-overlay {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.3); /* 遮罩变淡 */
+            backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); /* 遮罩模糊 */
+            z-index: 1000;
+            display: none; align-items: flex-end; /* 默认底部弹出 */
+            opacity: 0; transition: 0.3s;
+        }
+        .modal-overlay.active { display: flex; opacity: 1; }
+
+        .modal-card {
+            width: 100%; max-width: 100%; max-height: auto;
+            border-radius: 24px 24px 0 0;
+            /* [核心] 模态框材质 */
+            background: rgba(28, 28, 30, 0.75);
+            backdrop-filter: blur(35px); -webkit-backdrop-filter: blur(35px);
+            padding: 24px 24px 40px;
+            transform: translateY(100%); transition: 0.4s cubic-bezier(0.19, 1, 0.22, 1);
+            border-top: 1px solid rgba(255,255,255,0.15);
+            box-shadow: 0 -10px 40px rgba(0,0,0,0.3);
+            overflow-y: auto;
+        }
+
+        @media (min-width: 600px) {
+            .modal-overlay { align-items: center; justify-content: center; }
+            .modal-card {
+                width: 90%; max-width: 450px;
+                border-radius: 24px;
+                transform: scale(0.9); opacity: 0;
+            }
+            .modal-overlay.active .modal-card { transform: scale(1); opacity: 1; }
+        }
+        .modal-overlay.active .modal-card { transform: translateY(0); }
+
+        .modal-header {
+            font-size: 18px; font-weight: 700; margin-bottom: 20px;
+            display: flex; justify-content: space-between; align-items: center;
+            color: var(--text-main);
+            letter-spacing: 0.5px;
+        }
+        .close-icon {
+            font-size: 24px; color: var(--text-sub); cursor: pointer; padding: 5px;
+            background: rgba(255,255,255,0.1); border-radius: 50%; width: 32px; height: 32px;
+            display: flex; align-items: center; justify-content: center;
+            transition: 0.2s;
+        }
+        .close-icon:hover { background: rgba(255,255,255,0.2); color: #fff; }
+
+        /* 心情选择器优化 */
+        .mood-selector {
+            background: rgba(255,255,255,0.05);
+            padding: 15px; border-radius: 20px;
+            display: flex; justify-content: space-around;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .mood-item {
+            width: 36px; height: 36px; opacity: 0.4;
+            transform: scale(0.9); transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+        .mood-item.selected { opacity: 1; transform: scale(1.25); box-shadow: 0 0 20px currentColor; }
+
+        /* 表单控件美化 */
+        .form-group { margin-bottom: 15px; }
+        .form-label { display: block; font-size: 12px; color: var(--text-sub); margin-bottom: 8px; font-weight: 500; }
+        .form-input, .form-textarea {
+            width: 100%; padding: 14px;
+            background: rgba(0,0,0,0.2); /* 输入框稍微深一点 */
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 14px;
+            color: #fff; font-size: 15px; outline: none; font-family: inherit;
+            transition: 0.2s;
+        }
+        .form-input:focus, .form-textarea:focus {
+            border-color: var(--accent-blue);
+            background: rgba(0,0,0,0.4);
+        }
+        .form-textarea { min-height: 120px; resize: vertical; line-height: 1.6; }
+
+        .btn-primary {
+            width: 100%; padding: 16px; border-radius: 16px; border: none;
+            background: var(--accent-blue); color: #fff; font-weight: 600; font-size: 16px;
+            cursor: pointer; margin-top: 10px; transition: 0.2s;
+            box-shadow: 0 4px 15px rgba(10, 132, 255, 0.3);
+        }
+        .btn-primary:active { transform: scale(0.98); }
+        .btn-secondary {
+            background: rgba(255,255,255,0.1); color: var(--text-main);
+            box-shadow: none; border: 1px solid rgba(255,255,255,0.1);
+        }
+        .btn-danger {
+            background: rgba(255, 69, 58, 0.15); color: var(--accent-red);
+            box-shadow: none; border: 1px solid rgba(255, 69, 58, 0.2);
+        }
+
+        /* AI 内容框美化 */
+        .ai-content-box {
+            background: rgba(255,255,255,0.03); border-radius: 16px; padding: 18px;
+            font-size: 14px; line-height: 1.7;
+            border: 1px solid rgba(255,255,255,0.05);
+            border-left: 3px solid var(--accent-green);
+            margin-top: 15px; display: none; white-space: pre-wrap;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+
+        /* 统计饼图 */
+        .pie-chart {
+            width: 180px; height: 180px; border-radius: 50%; background: #333; margin: 0 auto 20px;
+            position: relative; box-shadow: 0 0 30px rgba(0,0,0,0.3);
+            border: 5px solid rgba(255,255,255,0.05); /* 增加外环 */
+        }
+        .legend-item {
+            background: rgba(255,255,255,0.05); padding: 6px 10px; border-radius: 8px;
+            margin-bottom: 6px; display: flex; align-items: center; gap: 8px;
+        }
+
+        /* 复习卡片 (翻转效果) */
+        .review-card {
+            background: linear-gradient(145deg, rgba(44, 44, 46, 0.9), rgba(28, 28, 30, 0.9));
+            border-radius: 20px; padding: 40px 25px; min-height: 240px;
+            display: flex; flex-direction: column; justify-content: center; text-align: center;
+            margin-bottom: 25px; font-size: 18px; font-weight: 500;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.1); cursor: pointer;
+            transition: transform 0.3s;
+        }
+        .review-card:active { transform: scale(0.98); }
+
+        /* 动画 */
+        @keyframes slideIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes popIn { from { transform: scale(0); opacity:0; } to { transform: scale(1); opacity:1; } }
+        @keyframes bounceCheck { 0% { transform: scale(1); } 50% { transform: scale(1.3); } 100% { transform: scale(1); } }
+        .loading-spin { display:inline-block; animation: spin 1s infinite linear; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+        /* 模型列表滚动条优化 */
+        #modelList::-webkit-scrollbar { width: 4px; }
+        #modelList::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+        .model-item:hover { background: rgba(255,255,255,0.1) !important; }
+        .model-item.selected { background: rgba(10, 132, 255, 0.25) !important; border-color: var(--accent-blue) !important; }
+
+    </style>
+
 
 </head>
 <body>
@@ -1512,6 +1523,7 @@ function getCurrentModel() {
     </script>
 </body>
 </html>
+
 
 
 
