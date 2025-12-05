@@ -82,45 +82,61 @@
         .top-actions { display: flex; gap: 15px; }
 
         /* === 3. 日历条 (通透胶囊) === */
-        
-/* === 3. 日历条 (悬浮药丸) === */
+ /* === 3. 日历条 (高级悬浮药丸) === */
 .calendar-strip-container {
-    flex-shrink: 0; padding: 15px 0 10px;
-    /* 去掉背景，让它悬浮 */
+    flex-shrink: 0; padding: 10px 0 15px;
     background: transparent;
 }
 .calendar-strip {
     display: flex; gap: 12px; padding: 0 20px; overflow-x: auto;
     scrollbar-width: none;
-    /* 增加底部内边距，防止阴影被切 */
-    padding-bottom: 10px;
+    padding-bottom: 20px; /* 留出阴影空间 */
 }
-.calendar-strip::-webkit-scrollbar { display: none; }
 
 .day-pill {
-    flex: 0 0 50px; height: 70px;
-    border-radius: 25px; /* 更圆润 */
-    background: var(--glass-bg);
-    backdrop-filter: blur(10px);
-    border: 1px solid var(--glass-border);
+    flex: 0 0 52px; height: 72px;
+    border-radius: 26px; /* 更圆润，像鹅卵石 */
+
+    /* [核心美化] 极简通透感 */
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+
+    /* 边框极淡，几乎看不见，只留光感 */
+    border: 1px solid rgba(255, 255, 255, 0.08);
+
     display: flex; flex-direction: column; align-items: center; justify-content: center;
-    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
     position: relative; cursor: pointer;
-}
-.day-pill span:first-child { font-size: 11px; color: var(--text-sub); margin-bottom: 4px; font-weight: 500; }
-.day-pill span:last-child { font-size: 19px; font-weight: 600; }
 
-/* 选中态：发光白 */
+    /* 默认状态下的微弱阴影 */
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+
+.day-pill span:first-child {
+    font-size: 11px; color: rgba(255,255,255,0.4);
+    margin-bottom: 4px; font-weight: 500; letter-spacing: 0.5px;
+}
+.day-pill span:last-child {
+    font-size: 20px; font-weight: 600;
+    color: rgba(255,255,255,0.9);
+}
+
+/* 选中态：发光白玉质感 */
 .day-pill.active {
-    background: #fff; border-color: #fff;
-    transform: translateY(-2px) scale(1.05);
-    box-shadow: 0 8px 20px rgba(255,255,255,0.15);
+    background: #fff;
+    border-color: #fff;
+    transform: translateY(-4px) scale(1.02); /* 悬浮得更高 */
+    /* 强烈的辉光阴影 */
+    box-shadow: 0 12px 30px rgba(255,255,255,0.25);
 }
-.day-pill.active span:first-child, .day-pill.active span:last-child { color: #000; }
+.day-pill.active span:first-child { color: rgba(0,0,0,0.5); }
+.day-pill.active span:last-child { color: #000; }
 
+/* 有数据的点 */
 .day-pill.has-data::after {
-    content: ''; position: absolute; bottom: 6px; width: 4px; height: 4px;
+    content: ''; position: absolute; bottom: 8px; width: 4px; height: 4px;
     background: var(--accent-green); border-radius: 50%;
+    box-shadow: 0 0 5px var(--accent-green); /* 点也发光 */
 }
 
         /* 心情标记 - 增加光晕 */
@@ -214,16 +230,21 @@
         .bubble.has-ai .ai-tag { display: block; }
 
         /* === 6. 底部 Dock (极致磨砂) === */
-        .bottom-dock {
-            flex-shrink: 0; padding: 15px;
-            /* 模仿 iOS 底部栏 */
-            background: rgba(20, 20, 20, 0.6);
-            backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px);
-            border-top: 0.5px solid rgba(255,255,255,0.1);
-            display: flex; flex-direction: column; gap: 12px;
-            padding-bottom: max(15px, env(safe-area-inset-bottom));
-            z-index: 200;
-        }
+/* === 6. 底部 Dock (极致磨砂 & 位置修复) === */
+.bottom-dock {
+    flex-shrink: 0; padding: 15px;
+    /* 模仿 iOS 底部栏，确保固定在底部 */
+    background: rgba(20, 20, 20, 0.6);
+    backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px);
+    border-top: 0.5px solid rgba(255,255,255,0.1);
+    display: flex; flex-direction: column; gap: 12px;
+    padding-bottom: max(15px, env(safe-area-inset-bottom)); /* 适配全面屏 */
+    z-index: 200;
+    /* 确保它不会被主舞台挤上去 */
+    position: relative;
+}
+
+
         .dock-row {
             display: flex; gap: 10px; overflow-x: auto; padding-bottom: 2px;
             scrollbar-width: none;
@@ -246,23 +267,29 @@
         }
 
         /* [重要修正] 底部输入框样式复原 + 美化 */
-        .input-row { display: flex; gap: 12px; align-items: center; margin-top: 5px; }
-        #mainInput {
-            flex: 1; height: 50px; padding: 0 20px;
-            border-radius: 25px;
-            border: 1px solid rgba(255,255,255,0.15);
-            /* 更细腻的磨砂输入框 */
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-            color: #fff; font-size: 16px; outline: none;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-            transition: all 0.2s;
-        }
-        #mainInput:focus {
-            border-color: var(--accent-blue);
-            background: rgba(30,30,30,0.8); /* 聚焦时稍微变深，增加可读性 */
-            box-shadow: 0 0 0 4px rgba(10, 132, 255, 0.2);
-        }
+     /* 输入框行优化 */
+.input-row {
+    display: flex; gap: 12px; align-items: center; margin-top: 5px;
+    width: 100%; /* 占满宽度 */
+}
+
+#mainInput {
+    flex: 1; height: 50px; padding: 0 20px;
+    border-radius: 25px;
+    border: 1px solid rgba(255,255,255,0.1); /* 边框调淡 */
+    /* 更细腻的磨砂输入框 */
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    color: #fff; font-size: 16px; outline: none;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1); /* 阴影柔和化 */
+    transition: all 0.2s;
+}
+#mainInput:focus {
+    border-color: var(--accent-blue);
+    background: rgba(40,40,40,0.6); /* 聚焦时加深背景，提升可读性 */
+    box-shadow: 0 0 0 4px rgba(10, 132, 255, 0.15);
+}
+
 
         #sendBtn {
             width: 50px; height: 50px; border-radius: 50%; border: none;
@@ -275,40 +302,52 @@
         }
         #sendBtn:active { transform: scale(0.9); }
 
-        /* === 7. 模态框 (全面美化 - 磨砂半透明) === */
-        .modal-overlay {
-            position: fixed; inset: 0;
-            background: rgba(0,0,0,0.3); /* 遮罩变淡 */
-            backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); /* 遮罩模糊 */
-            z-index: 1000;
-            display: none; align-items: flex-end; /* 默认底部弹出 */
-            opacity: 0; transition: 0.3s;
-        }
-        .modal-overlay.active { display: flex; opacity: 1; }
 
-        .modal-card {
-            width: 100%; max-width: 100%; max-height: auto;
-            border-radius: 24px 24px 0 0;
-            /* [核心] 模态框材质 */
-            background: rgba(28, 28, 30, 0.75);
-            backdrop-filter: blur(35px); -webkit-backdrop-filter: blur(35px);
-            padding: 24px 24px 40px;
-            transform: translateY(100%); transition: 0.4s cubic-bezier(0.19, 1, 0.22, 1);
-            border-top: 1px solid rgba(255,255,255,0.15);
-            box-shadow: 0 -10px 40px rgba(0,0,0,0.3);
-            overflow-y: auto;
-        }
+/* === 7. 模态框 (双端适配优化) === */
+.modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.4); /* 遮罩稍微加深一点点 */
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    z-index: 1000;
+    display: none;
+    align-items: flex-end; /* 手机端默认：底部对齐 */
+    opacity: 0; transition: 0.3s;
+}
+.modal-overlay.active { display: flex; opacity: 1; }
 
-        @media (min-width: 600px) {
-            .modal-overlay { align-items: center; justify-content: center; }
-            .modal-card {
-                width: 90%; max-width: 450px;
-                border-radius: 24px;
-                transform: scale(0.9); opacity: 0;
-            }
-            .modal-overlay.active .modal-card { transform: scale(1); opacity: 1; }
-        }
-        .modal-overlay.active .modal-card { transform: translateY(0); }
+.modal-card {
+    width: 100%; max-width: 100%;
+    max-height: auto; /* 防止太高溢出 */
+    border-radius: 24px 24px 0 0; /* 手机端：上圆角 */
+    /* [核心] 统一的高级磨砂材质 */
+    background: rgba(30, 30, 32, 0.85); /* 稍微不透明一点，防背景干扰 */
+    backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px);
+    padding: 24px 24px 40px;
+    transform: translateY(100%); /* 手机端动画：从下往上 */
+    transition: 0.4s cubic-bezier(0.19, 1, 0.22, 1);
+    border-top: 1px solid rgba(255,255,255,0.1);
+    box-shadow: 0 -10px 40px rgba(0,0,0,0.4);
+    overflow-y: auto;
+}
+
+/* 电脑端/平板端 适配 */
+@media (min-width: 600px) {
+    .modal-overlay {
+        align-items: center; justify-content: center; /* 电脑端：居中 */
+    }
+    .modal-card {
+        width: 90%; max-width: 480px;
+        border-radius: 24px; /* 电脑端：全圆角 */
+        transform: scale(0.95); opacity: 0; /* 电脑端动画：缩放淡入 */
+        box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        border: 1px solid rgba(255,255,255,0.1); /* 全边框 */
+    }
+    .modal-overlay.active .modal-card {
+        transform: scale(1); opacity: 1;
+    }
+}
+/* 手机端激活状态 */
+.modal-overlay.active .modal-card { transform: translateY(0); }
 
         .modal-header {
             font-size: 18px; font-weight: 700; margin-bottom: 20px;
@@ -1532,6 +1571,7 @@ function getCurrentModel() {
     </script>
 </body>
 </html>
+
 
 
 
